@@ -77,7 +77,7 @@ const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) =>
     },
   })
 
-  if (existingSession.status === "CLOSED") {
+  if (existingSession &&existingSession.status === "CLOSED") {
     throw new ApiError(409, 'Sales session closed for today')
   }
   
