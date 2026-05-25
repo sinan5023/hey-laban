@@ -52,16 +52,12 @@ const getTodaySalesSession = async ({ shopId }) => {
       },
     },
   })
-
-   if (!session) {
-    console.log("session not open ")
-    throw new ApiError(404, 'No sales session found for today')
+  if(!session){
+    throw new ApiError(409,"Sales session does not exist for today")
   }
-
-  if (session.status !== SessionStatus.OPEN) {
-    throw new ApiError(409, 'Today’s sales session is not open')
+  if(session && session.status === "CLOSED"){
+    throw new ApiError(409,"The sales ession for today is closed")
   }
-
   return session
 }
 
@@ -77,14 +73,9 @@ const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) =>
     },
   })
 
-  if (existingSession &&existingSession.status === "CLOSED") {
-    throw new ApiError(409, 'Sales session closed for today')
-  }
-  
   if (existingSession) {
     throw new ApiError(409, 'Sales session already exists for today')
   }
-  
 
   return prisma.salesSession.create({
     data: {
