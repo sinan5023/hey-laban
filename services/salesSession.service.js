@@ -25,7 +25,7 @@ const normalizeCategoryName = (value) => {
 const getTodaySalesSession = async ({ shopId }) => {
   const businessDate = getBusinessDate()
 
-  return prisma.salesSession.findUnique({
+  const session =  prisma.salesSession.findUnique({
     where: {
       shopId_date: {
         shopId,
@@ -52,6 +52,17 @@ const getTodaySalesSession = async ({ shopId }) => {
       },
     },
   })
+
+   if (!session) {
+    console.log("session not open ")
+    throw new ApiError(404, 'No sales session found for today')
+  }
+
+  if (session.status !== SessionStatus.OPEN) {
+    throw new ApiError(409, 'Today’s sales session is not open')
+  }
+
+  return session
 }
 
 const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) => {

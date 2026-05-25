@@ -67,7 +67,7 @@ const getTodaySession = async (req, res) => {
   } catch (error) {
     return sendError(res, {
       statusCode: error.statusCode || 500,
-      message: 'Failed to fetch today sales session',
+      message: error.message,
       error: error.error || null,
     })
   }
