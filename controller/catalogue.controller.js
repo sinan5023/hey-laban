@@ -14,12 +14,7 @@ const getCatalogue = async (req, res) => {
     });
   } catch (error) {
     console.error("Get catalogue error:", error);
-
-    return sendError(res, {
-      statusCode: error.statusCode || 500,
-      message: error.message || "Internal server error",
-      error: error.error || null,
-    });
+    next(error)
   }
 };
 

@@ -22,18 +22,7 @@ const createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("createOrder error:", error);
-
-    if (error instanceof ApiError) {
-      return sendError(res, {
-        statusCode: error.statusCode,
-        message: error.message,
-        error: error.error,
-      });
-    }
-
-    return sendError(res, {
-      message: "Failed to create order",
-    });
+    next(error)
   }
 };
 
@@ -69,10 +58,7 @@ const listOrders = async (req, res) => {
     });
   } catch (error) {
     console.error('listOrders error:', error);
-
-    return sendError(res, {
-      message: 'Failed to fetch orders',
-    });
+    next(error)
   }
 };
 
@@ -89,18 +75,7 @@ const getOrderById = async (req, res) => {
     });
   } catch (error) {
     console.error('getOrderById error:', error);
-
-    if (error instanceof ApiError) {
-      return sendError(res, {
-        statusCode: error.statusCode,
-        message: error.message,
-        error: error.error,
-      });
-    }
-
-    return sendError(res, {
-      message: 'Failed to fetch order',
-    });
+    next(error)
   }
 };
 
@@ -122,18 +97,7 @@ const editOrderById = async (req, res) => {
     });
   } catch (error) {
     console.error('patchOrder error:', error);
-
-    if (error instanceof ApiError) {
-      return sendError(res, {
-        statusCode: error.statusCode,
-        message: error.message,
-        error: error.error,
-      });
-    }
-
-    return sendError(res, {
-      message: 'Failed to update order items',
-    });
+    next(error)
   }
 };
 

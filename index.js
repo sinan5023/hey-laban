@@ -8,6 +8,8 @@ const authApi = require("./Routes/auth.api");
 const catalogueApi = require("./Routes/Catalogue.api");
 const salesSessionApi = require("./Routes/SalesSession.api")
 const ordersApi = require("./Routes/orders.api")
+// Global error handlong middleware
+const errorHandler = require("./middlewares/globalErrorHandler.middleware")
 
 dotenv.config();
 const app = express();
@@ -28,12 +30,22 @@ app.use(
     ],
   }),
 );
+
 //APIS
 
 app.use("/api", catalogueApi);
 app.use("/api/auth", authApi);
 app.use("/api/sales-session",salesSessionApi)
 app.use("/api/orders",ordersApi)
+
+//global error handler 
+app.use(errorHandler)
+
+
+
+
+
+
 
 app.listen(8000, () => {
   console.log("The Server Is Up And Running");

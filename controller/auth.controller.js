@@ -28,12 +28,7 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-
-    return sendError(res, {
-      statusCode: error.statusCode || 500,
-      message: error.message || "Internal server error",
-      error: error.error || null,
-    });
+    next(error)
   }
 };
 
@@ -81,12 +76,7 @@ const logout = async (req, res) => {
     });
   } catch (error) {
     console.error("Logout error:", error);
-
-    return sendError(res, {
-      statusCode: error.statusCode || 500,
-      message: error.message || "Internal server error",
-      error: error.error || null,
-    });
+    next(error)
   }
 };
 

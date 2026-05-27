@@ -40,7 +40,7 @@ enum PaymentMethod {
   CASH
   UPI
   CARD
-  OTHER
+  NOTPAID
 }
 
 enum PaymentStatus {

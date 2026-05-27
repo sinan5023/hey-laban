@@ -178,6 +178,142 @@ const createKot = async ({ shopId, orderId, note, createdById, salesSessionId })
   })
 }
 
+const getKotById = async ({ shopId, session, kotId }) => {
+  const kot = await prisma.kot.findFirst({
+    where: {
+      id: kotId,
+      shopId,
+      sessionId: session.id,
+    },
+    select: {
+      id: true,
+      shopId: true,
+      sessionId: true,
+      orderId: true,
+      kotNo: true,
+      status: true,
+      timesPrinted: true,
+      note: true,
+      printedAt: true,
+      createdById: true,
+      order: {
+        select: {
+          id: true,
+          orderNo: true,
+          tokenNo: true,
+          status: true,
+          kotStatus: true,
+          subtotal: true,
+          discountAmount: true,
+          totalAmount: true,
+          note: true,
+          createdAt: true,
+        },
+      },
+      kotItems: {
+        select: {
+          id: true,
+          kotId: true,
+          productId: true,
+          name: true,
+          quantity: true,
+          note: true,
+        },
+      },
+    },
+  })
+
+  if (!kot) {
+    throw new ApiError(404, "KOT not found")
+  }
+
+  return {
+    ...kot,
+    kotItems: kot.kotItems.map((item) => ({
+      ...item,
+      quantity: Number(item.quantity),
+    })),
+  }
+}
+
+const listKots = async ({
+  shopId,
+  session,
+  status = null,
+  page = 1,
+  limit = 20,
+  sortBy = "printedAt",
+  sortDir = "DESC",
+}) => {
+  const pageNum = Math.max(1, parseInt(page, 10)) || 1
+  const limitNum = Math.max(1, parseInt(limit, 10)) || 20
+  const offset = (pageNum - 1) * limitNum
+
+  const whereClause = {
+    shopId,
+    sessionId: session.id,
+  }
+
+  if (status) {
+    whereClause.status = status
+  }
+
+  const orderByClause = {}
+
+  switch (sortBy) {
+    case "kotNo":
+      orderByClause.kotNo = sortDir.toLowerCase()
+      break
+    case "timesPrinted":
+      orderByClause.timesPrinted = sortDir.toLowerCase()
+      break
+    default:
+      orderByClause.printedAt = sortDir.toLowerCase()
+      break
+  }
+
+  const kots = await prisma.kot.findMany({
+    where: whereClause,
+    orderBy: orderByClause,
+    skip: offset,
+    take: limitNum,
+    select: {
+      id: true,
+      kotNo: true,
+      status: true,
+      timesPrinted: true,
+      note: true,
+      printedAt: true,
+      order: {
+        select: {
+          id: true,
+          orderNo: true,
+          tokenNo: true,
+          status: true,
+          kotStatus: true,
+        },
+      },
+    },
+  })
+
+  const total = await prisma.kot.count({
+    where: whereClause,
+  })
+
+  return {
+    data: kots,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      hasNext: pageNum * limitNum < total,
+      hasPrev: pageNum > 1,
+    },
+  }
+}
+
 module.exports = {
   createKot,
+  listKots,
+  getKotById
 }

@@ -38,11 +38,8 @@ const createSalesSession = async (req, res) => {
       data: session,
     })
   } catch (error) {
-    return sendError(res, {
-      statusCode: error.statusCode || 500,
-      message: error.message || 'Failed to open sales session',
-      error: error.error || null,
-    })
+   console.log(error)
+   next(error)
   }
 }
 
@@ -65,11 +62,8 @@ const getTodaySession = async (req, res) => {
       data: session,
     })
   } catch (error) {
-    return sendError(res, {
-      statusCode: error.statusCode || 500,
-      message: error.message,
-      error: error.error || null,
-    })
+    console.log(error)
+    next(error)
   }
 }
 
@@ -106,11 +100,8 @@ const closeTodaySession = async (req, res) => {
       data: session,
     })
   } catch (error) {
-    return sendError(res, {
-      statusCode: error.statusCode || 500,
-      message: error.message || 'Failed to close sales session',
-      error: error.error || null,
-    })
+    console.log(error)
+    next(error)
   }
 }
 
