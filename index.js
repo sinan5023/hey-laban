@@ -4,9 +4,10 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 // Routes
-const authApi = require("./Routes/Auth.api");
+const authApi = require("./Routes/auth.api");
 const catalogueApi = require("./Routes/Catalogue.api");
 const salesSessionApi = require("./Routes/SalesSession.api")
+const ordersApi = require("./Routes/orders.api")
 
 dotenv.config();
 const app = express();
@@ -32,6 +33,7 @@ app.use(
 app.use("/api", catalogueApi);
 app.use("/api/auth", authApi);
 app.use("/api/sales-session",salesSessionApi)
+app.use("/api/orders",ordersApi)
 
 app.listen(8000, () => {
   console.log("The Server Is Up And Running");

@@ -1,7 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const ApiError = require("../helpers/ApiError");
 
-const prisma = require("../lib/prisma")
+const prisma = require("../lib/prisma");
 
 const getCatalogue = async ({ shopId }) => {
   if (!shopId) {
@@ -18,10 +18,7 @@ const getCatalogue = async ({ shopId }) => {
         },
       },
     },
-    orderBy: [
-      { sortOrder: "asc" },
-      { name: "asc" },
-    ],
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: {
       id: true,
       name: true,
@@ -30,10 +27,7 @@ const getCatalogue = async ({ shopId }) => {
         where: {
           isActive: true,
         },
-        orderBy: [
-          { sortOrder: "asc" },
-          { name: "asc" },
-        ],
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: {
           id: true,
           name: true,

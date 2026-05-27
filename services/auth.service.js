@@ -7,7 +7,7 @@ const {
   hashToken,
 } = require("../helpers/token");
 
-const prisma = require("../lib/prisma")
+const prisma = require("../lib/prisma");
 
 const REFRESH_TOKEN_EXPIRES_IN_MS = 7 * 24 * 60 * 60 * 1000;
 

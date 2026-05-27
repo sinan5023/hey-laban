@@ -1,31 +1,31 @@
-const { Prisma, SessionStatus, ExpenseEntryType } = require('@prisma/client')
-const prisma = require('../lib/prisma')
-const ApiError = require('../helpers/ApiError')
-const getBusinessDate = require('../helpers/getBusinessDate')
+const { Prisma, SessionStatus, ExpenseEntryType } = require("@prisma/client");
+const prisma = require("../lib/prisma");
+const ApiError = require("../helpers/ApiError");
+const getBusinessDate = require("../helpers/getBusinessDate");
 
-const toDecimal = (value, fieldName = 'amount') => {
-  if (value === undefined || value === null || value === '') {
-    return new Prisma.Decimal(0)
+const toDecimal = (value, fieldName = "amount") => {
+  if (value === undefined || value === null || value === "") {
+    return new Prisma.Decimal(0);
   }
 
-  const parsed = Number(value)
+  const parsed = Number(value);
 
   if (Number.isNaN(parsed) || parsed < 0) {
-    throw new ApiError(400, `${fieldName} must be a valid non-negative number`)
+    throw new ApiError(400, `${fieldName} must be a valid non-negative number`);
   }
 
-  return new Prisma.Decimal(parsed)
-}
+  return new Prisma.Decimal(parsed);
+};
 
 const normalizeCategoryName = (value) => {
-  if (typeof value !== 'string') return ''
-  return value.trim()
-}
+  if (typeof value !== "string") return "";
+  return value.trim();
+};
 
 const getTodaySalesSession = async ({ shopId }) => {
-  const businessDate = getBusinessDate()
+  const businessDate = getBusinessDate();
 
-  const session =  prisma.salesSession.findUnique({
+  const session = prisma.salesSession.findUnique({
     where: {
       shopId_date: {
         shopId,
@@ -47,22 +47,27 @@ const getTodaySalesSession = async ({ shopId }) => {
       },
       expenses: {
         orderBy: {
-          createdAt: 'asc',
+          createdAt: "asc",
         },
       },
     },
-  })
-  if(!session){
-    throw new ApiError(409,"Sales session does not exist for today")
+  });
+  if (!session) {
+    throw new ApiError(409, "Sales session does not exist for today");
   }
-  if(session && session.status === "CLOSED"){
-    throw new ApiError(409,"The sales ession for today is closed")
+  if (session && session.status === "CLOSED") {
+    throw new ApiError(409, "The sales ession for today is closed");
   }
-  return session
-}
+  return session;
+};
 
-const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) => {
-  const businessDate = getBusinessDate()
+const openSalesSession = async ({
+  shopId,
+  userId,
+  openingCash,
+  openingNote,
+}) => {
+  const businessDate = getBusinessDate();
 
   const existingSession = await prisma.salesSession.findUnique({
     where: {
@@ -71,10 +76,10 @@ const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) =>
         date: businessDate,
       },
     },
-  })
+  });
 
   if (existingSession) {
-    throw new ApiError(409, 'Sales session already exists for today')
+    throw new ApiError(409, "Sales session already exists for today");
   }
 
   return prisma.salesSession.create({
@@ -82,7 +87,7 @@ const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) =>
       shopId,
       date: businessDate,
       status: SessionStatus.OPEN,
-      openingCash: toDecimal(openingCash, 'openingCash'),
+      openingCash: toDecimal(openingCash, "openingCash"),
       openingNote: openingNote || null,
       openedById: userId,
     },
@@ -95,29 +100,48 @@ const openSalesSession = async ({ shopId, userId, openingCash, openingNote }) =>
       },
       expenses: true,
     },
-  })
-}
+  });
+};
 
-const closeTodaySalesSession = async ({ shopId, userId, closingNote, expenses = [] }) => {
-  const businessDate = getBusinessDate()
-  const normalizedExpenses = Array.isArray(expenses) ? expenses : []
+const closeTodaySalesSession = async ({
+  shopId,
+  userId,
+  closingNote,
+  expenses = [],
+}) => {
+  // Before closing checking for unsetteled or orders that are due/ pending
+  // const unsettled = await prisma.order.count({
+  //   where: {
+  //     sessionId,
+  //     status: { in: ["OPEN", "DUE"] }
+  //   }
+  // });
+
+  // if (unsettled > 0) {
+  //   throw new ApiError(400, `${unsettled} orders are unsettled. Settle all orders before closing the session.`);
+  // }
+  const businessDate = getBusinessDate();
+  const normalizedExpenses = Array.isArray(expenses) ? expenses : [];
 
   for (const expense of normalizedExpenses) {
-    const categoryName = normalizeCategoryName(expense?.categoryName)
+    const categoryName = normalizeCategoryName(expense?.categoryName);
 
     if (!categoryName) {
-      throw new ApiError(400, 'Each expense must include a categoryName')
+      throw new ApiError(400, "Each expense must include a categoryName");
     }
 
     if (
       expense.amount === undefined ||
       expense.amount === null ||
-      expense.amount === ''
+      expense.amount === ""
     ) {
-      throw new ApiError(400, `Amount is required for expense category: ${categoryName}`)
+      throw new ApiError(
+        400,
+        `Amount is required for expense category: ${categoryName}`,
+      );
     }
 
-    toDecimal(expense.amount, `${categoryName} amount`)
+    toDecimal(expense.amount, `${categoryName} amount`);
   }
 
   return prisma.$transaction(async (tx) => {
@@ -128,14 +152,14 @@ const closeTodaySalesSession = async ({ shopId, userId, closingNote, expenses = 
           date: businessDate,
         },
       },
-    })
+    });
 
     if (!session) {
-      throw new ApiError(404, 'No sales session found for today')
+      throw new ApiError(404, "No sales session found for today");
     }
 
     if (session.status !== SessionStatus.OPEN) {
-      throw new ApiError(409, 'Today’s sales session is not open')
+      throw new ApiError(409, "Today’s sales session is not open");
     }
 
     if (normalizedExpenses.length > 0) {
@@ -147,7 +171,7 @@ const closeTodaySalesSession = async ({ shopId, userId, closingNote, expenses = 
           categoryName: normalizeCategoryName(expense.categoryName),
           amount: toDecimal(
             expense.amount,
-            `${normalizeCategoryName(expense.categoryName)} amount`
+            `${normalizeCategoryName(expense.categoryName)} amount`,
           ),
           note: expense.note ? String(expense.note).trim() || null : null,
           expenseDate: businessDate,
@@ -155,7 +179,7 @@ const closeTodaySalesSession = async ({ shopId, userId, closingNote, expenses = 
           periodEnd: null,
           createdById: userId,
         })),
-      })
+      });
     }
 
     await tx.salesSession.update({
@@ -168,7 +192,7 @@ const closeTodaySalesSession = async ({ shopId, userId, closingNote, expenses = 
         closedAt: new Date(),
         closedById: userId,
       },
-    })
+    });
 
     return tx.salesSession.findUnique({
       where: {
@@ -189,16 +213,16 @@ const closeTodaySalesSession = async ({ shopId, userId, closingNote, expenses = 
         },
         expenses: {
           orderBy: {
-            createdAt: 'asc',
+            createdAt: "asc",
           },
         },
       },
-    })
-  })
-}
+    });
+  });
+};
 
 const requireTodayOpenSession = async ({ shopId }) => {
-  const businessDate = getBusinessDate()
+  const businessDate = getBusinessDate();
 
   const session = await prisma.salesSession.findUnique({
     where: {
@@ -207,22 +231,22 @@ const requireTodayOpenSession = async ({ shopId }) => {
         date: businessDate,
       },
     },
-  })
+  });
 
   if (!session) {
-    throw new ApiError(409, 'Sales session is not opened for today')
+    throw new ApiError(409, "Sales session is not opened for today");
   }
 
   if (session.status !== SessionStatus.OPEN) {
-    throw new ApiError(409, 'Sales session is closed for today')
+    throw new ApiError(409, "Sales session is closed for today");
   }
 
-  return session
-}
+  return session;
+};
 
 module.exports = {
   openSalesSession,
   getTodaySalesSession,
   closeTodaySalesSession,
   requireTodayOpenSession,
-}
+};
