@@ -22,7 +22,7 @@ router.get("/:orderId",authMiddleware,salesSessionMiddleware,validate(getOrderBy
 router.patch("/:orderId",authMiddleware,salesSessionMiddleware,validate(patchOrderSchema),orderController.editOrderById)
 router.post("/:orderId/kot",authMiddleware,salesSessionMiddleware,validate(createKotSchema),kotController.createKotHandler)
 router.post("/:orderId/payments",authMiddleware,salesSessionMiddleware,validate(addPaymentsToOrderSchema),paymentsController.addPaymentsToOrderHandler)
-
+router.get("/:orderId/payments",authMiddleware,salesSessionMiddleware,paymentsController.getPaymentsByOrderIdHandler)
 
 
 

@@ -207,6 +207,80 @@ const addPaymentsToOrder = async ({
   })
 }
 
+const getPaymentsByOrderId = async ({ shopId, session, orderId }) => {
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      shopId,
+      sessionId: session.id,
+    },
+    select: {
+      id: true,
+      orderNo: true,
+      tokenNo: true,
+      status: true,
+      totalAmount: true,
+      payments: {
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          method: true,
+          amount: true,
+          referenceNo: true,
+          cashTendered: true,
+          changeAmount: true,
+          status: true,
+          createdAt: true,
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!order) {
+    throw new ApiError(404, "Order not found")
+  }
+
+  const totalPaid = order.payments
+    .filter((payment) => payment.status === "COMPLETED")
+    .reduce((sum, payment) => sum + Number(payment.amount), 0)
+
+  const totalAmount = Number(order.totalAmount)
+  const balanceDue = Math.max(0, totalAmount - totalPaid)
+
+  return {
+    orderId: order.id,
+    orderNo: order.orderNo,
+    tokenNo: order.tokenNo,
+    orderStatus: order.status,
+    totalAmount,
+    totalPaid,
+    balanceDue,
+    payments: order.payments.map((payment) => ({
+      id: payment.id,
+      method: payment.method,
+      amount: Number(payment.amount),
+      referenceNo: payment.referenceNo,
+      cashTendered:
+        payment.cashTendered != null ? Number(payment.cashTendered) : null,
+      changeAmount:
+        payment.changeAmount != null ? Number(payment.changeAmount) : null,
+      status: payment.status,
+      createdAt: payment.createdAt,
+      createdBy: payment.createdBy,
+    })),
+  }
+}
+
 module.exports = {
   addPaymentsToOrder,
+  getPaymentsByOrderId
 }

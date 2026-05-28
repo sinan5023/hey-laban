@@ -1,4 +1,5 @@
 const paymentsService = require("../services/orders.payments.service")
+const {sendSuccess} = require("../helpers/response")
 
 const addPaymentsToOrderHandler = async (req, res, next) => {
   try {
@@ -10,9 +11,27 @@ const addPaymentsToOrderHandler = async (req, res, next) => {
       createdById: req.user.id,
     })
 
-    res.status(201).json({
-      success: true,
-      message: "Payments added successfully",
+   return sendSuccess(res, {
+      statusCode: 200,
+      message: "Payment Added Succesfully",
+      data,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getPaymentsByOrderIdHandler = async (req, res, next) => {
+  try {
+    const data = await paymentsService.getPaymentsByOrderId({
+      shopId: req.user.shopId,
+      session: req.salesSession,
+      orderId: req.params.orderId,
+    })
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: "Order payments fetched successfully",
       data,
     })
   } catch (error) {
@@ -22,4 +41,5 @@ const addPaymentsToOrderHandler = async (req, res, next) => {
 
 module.exports = {
   addPaymentsToOrderHandler,
+  getPaymentsByOrderIdHandler
 }
