@@ -5,17 +5,13 @@ const orderItemSchema = Joi.object({
   quantity: Joi.number().positive().required(),
   note: Joi.string().allow(null, "").optional(),
 });
-
 const createOrderSchema = Joi.object({
   body: Joi.object({
+    orderType: Joi.string().valid("DINE_IN", "TAKEOUT", "DELIVERY").required(),
     note: Joi.string().allow(null, "").optional(),
     discountAmount: Joi.number().min(0).optional().default(0),
     items: Joi.array().items(orderItemSchema).min(1).required(),
   }).required(),
-
-  query: Joi.object().unknown(true).optional(),
-  params: Joi.object().unknown(true).optional(),
-  headers: Joi.object().unknown(true).optional(),
 });
 
 const listOrdersQuery = Joi.object({
@@ -59,13 +55,11 @@ const getOrderByIdSchema = Joi.object({
   headers: Joi.object().unknown(true).optional(),
 }).meta({ className: "GetOrderByIdRequest" });
 
-
 const orderItemEditableSchema = Joi.object({
   productId: Joi.string().uuid().required(),
   quantity: Joi.number().positive().required(),
-  note: Joi.string().allow(null, '').optional(),
-})
-  .meta({ className: 'OrderItemEditable' });
+  note: Joi.string().allow(null, "").optional(),
+}).meta({ className: "OrderItemEditable" });
 
 // Main PATCH schema for /orders/:orderId
 const patchOrderSchema = Joi.object({
@@ -81,7 +75,11 @@ const patchOrderSchema = Joi.object({
     orderId: Joi.string().uuid().required(),
   }).required(),
   headers: Joi.object().unknown(true).optional(),
-})
-  .meta({ className: 'PatchOrderRequest' });
+}).meta({ className: "PatchOrderRequest" });
 
-module.exports = { createOrderSchema, listOrdersSchema, getOrderByIdSchema , patchOrderSchema };
+module.exports = {
+  createOrderSchema,
+  listOrdersSchema,
+  getOrderByIdSchema,
+  patchOrderSchema,
+};
