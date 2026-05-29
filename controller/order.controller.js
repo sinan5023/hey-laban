@@ -2,16 +2,17 @@ const ApiError = require("../helpers/ApiError");
 const { sendSuccess, sendError } = require("../helpers/response");
 const orderService = require("../services/orders.service");
 
-const createOrder = async (req, res , next) => {
+const createOrder = async (req, res, next) => {
   try {
     const shopId = req.user.shopId;
-    const { note, discountAmount = 0, items } = req.body;
+    const { note, discountAmount = 0, items, orderType } = req.body;
 
     const order = await orderService.createOrder({
       shopId,
-      session: req.salesSession, // from requireOpenSalesSession middleware
+      session: req.salesSession,
       items,
       note,
+      orderType,
       discountAmount,
     });
 
@@ -22,24 +23,23 @@ const createOrder = async (req, res , next) => {
     });
   } catch (error) {
     console.error("createOrder error:", error);
-    next(error)
+    next(error);
   }
 };
 
-
-const listOrders = async (req, res , next) => {
+const listOrders = async (req, res, next) => {
   try {
     const shopId = req.user.shopId;
     const session = req.salesSession; // from requireOpenSalesSession
     const { query } = req;
 
-    //fallback values for the apis 
-     const page = Math.max(1, parseInt(query.page, 10)) || 1;
+    //fallback values for the apis
+    const page = Math.max(1, parseInt(query.page, 10)) || 1;
     const limit = Math.max(1, parseInt(query.limit, 10)) || 20;
     const status = query.status || null;
     const kotStatus = query.kotStatus || null;
-    const sortBy = query.sortBy || 'createdAt';
-    const sortDir = (query.sortDir || 'DESC').toUpperCase();
+    const sortBy = query.sortBy || "createdAt";
+    const sortDir = (query.sortDir || "DESC").toUpperCase();
 
     const result = await orderService.listOrders({
       shopId,
@@ -53,16 +53,16 @@ const listOrders = async (req, res , next) => {
     });
 
     return sendSuccess(res, {
-      message: 'Orders fetched successfully',
+      message: "Orders fetched successfully",
       data: result,
     });
   } catch (error) {
-    console.error('listOrders error:', error);
-    next(error)
+    console.error("listOrders error:", error);
+    next(error);
   }
 };
 
-const getOrderById = async (req, res , next) => {
+const getOrderById = async (req, res, next) => {
   try {
     const shopId = req.user.shopId;
     const orderId = req.params.orderId;
@@ -70,16 +70,16 @@ const getOrderById = async (req, res , next) => {
     const order = await orderService.getOrderById({ shopId, orderId });
 
     return sendSuccess(res, {
-      message: 'Order fetched successfully',
+      message: "Order fetched successfully",
       data: order,
     });
   } catch (error) {
-    console.error('getOrderById error:', error);
-    next(error)
+    console.error("getOrderById error:", error);
+    next(error);
   }
 };
 
-const editOrderById = async (req, res , next) => {
+const editOrderById = async (req, res, next) => {
   try {
     const shopId = req.user.shopId;
     const orderId = req.params.orderId;
@@ -92,13 +92,13 @@ const editOrderById = async (req, res , next) => {
     });
 
     return sendSuccess(res, {
-      message: 'Order items updated successfully',
+      message: "Order items updated successfully",
       data: order,
     });
   } catch (error) {
-    console.error('patchOrder error:', error);
-    next(error)
+    console.error("patchOrder error:", error);
+    next(error);
   }
 };
 
-module.exports = { createOrder , listOrders  , getOrderById , editOrderById };
+module.exports = { createOrder, listOrders, getOrderById, editOrderById };

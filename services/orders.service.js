@@ -61,7 +61,7 @@ const createOrder = async ({
 
       throw new ApiError(
         400,
-        `Invalid or inactive product IDs: ${missingIds.join(", ")}`
+        `Invalid or inactive product IDs: ${missingIds.join(", ")}`,
       );
     }
 
