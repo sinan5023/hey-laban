@@ -7,6 +7,7 @@ const createOrder = async ({
   session,
   items,
   note,
+  orderType = "DINE_IN",
   discountAmount = 0,
 }) => {
   return await prisma.$transaction(async (tx) => {
@@ -60,7 +61,7 @@ const createOrder = async ({
 
       throw new ApiError(
         400,
-        `Invalid or inactive product IDs: ${missingIds.join(", ")}`,
+        `Invalid or inactive product IDs: ${missingIds.join(", ")}`
       );
     }
 
@@ -90,6 +91,7 @@ const createOrder = async ({
         sessionId,
         orderNo,
         tokenNo,
+        orderType,
         status: "OPEN",
         kotStatus: "NEW",
         subtotal,

@@ -48,6 +48,11 @@ enum PaymentStatus {
   REFUNDED
   FAILED
 }
+enum OrderType {
+  DINE_IN
+  TAKEOUT
+  DELIVERY
+}
 
 model Shop {
   id            String         @id @default(uuid()) @db.Uuid
@@ -205,6 +210,7 @@ model Order {
   sessionId       String        @map("session_id") @db.Uuid
   orderNo         String        @map("order_no")
   tokenNo         Int           @map("token_no")
+  orderType       OrderType     @default(DINE_IN) @map("order_type")
   status          OrderStatus   @default(OPEN)
   kotStatus       KotStatus     @default(NEW) @map("kot_status")
   subtotal        Decimal       @default(0) @db.Decimal(12, 2)
