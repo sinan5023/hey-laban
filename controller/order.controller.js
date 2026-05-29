@@ -2,7 +2,7 @@ const ApiError = require("../helpers/ApiError");
 const { sendSuccess, sendError } = require("../helpers/response");
 const orderService = require("../services/orders.service");
 
-const createOrder = async (req, res) => {
+const createOrder = async (req, res , next) => {
   try {
     const shopId = req.user.shopId;
     const { note, discountAmount = 0, items } = req.body;
@@ -27,7 +27,7 @@ const createOrder = async (req, res) => {
 };
 
 
-const listOrders = async (req, res) => {
+const listOrders = async (req, res , next) => {
   try {
     const shopId = req.user.shopId;
     const session = req.salesSession; // from requireOpenSalesSession
@@ -62,7 +62,7 @@ const listOrders = async (req, res) => {
   }
 };
 
-const getOrderById = async (req, res) => {
+const getOrderById = async (req, res , next) => {
   try {
     const shopId = req.user.shopId;
     const orderId = req.params.orderId;
@@ -79,7 +79,7 @@ const getOrderById = async (req, res) => {
   }
 };
 
-const editOrderById = async (req, res) => {
+const editOrderById = async (req, res , next) => {
   try {
     const shopId = req.user.shopId;
     const orderId = req.params.orderId;

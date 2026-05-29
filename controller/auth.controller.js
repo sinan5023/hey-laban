@@ -5,7 +5,7 @@ const {
   clearRefreshTokenCookie,
 } = require("../helpers/cookies");
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -28,11 +28,11 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    next(error)
+    next(error);
   }
 };
 
-const refresh = async (req, res) => {
+const refresh = async (req, res , next) => {
   try {
     const result = await authService.refresh({
       refreshToken: req.cookies.refreshToken,
@@ -76,7 +76,7 @@ const logout = async (req, res) => {
     });
   } catch (error) {
     console.error("Logout error:", error);
-    next(error)
+    next(error);
   }
 };
 

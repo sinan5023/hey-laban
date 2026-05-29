@@ -5,7 +5,7 @@ const {
   closeTodaySalesSession,
 } = require('../services/salesSession.service')
 
-const createSalesSession = async (req, res) => {
+const createSalesSession = async (req, res , next) => {
   try {
     const shopId = req.user?.shopId
     const userId = req.user?.id
@@ -43,7 +43,7 @@ const createSalesSession = async (req, res) => {
   }
 }
 
-const getTodaySession = async (req, res) => {
+const getTodaySession = async (req, res , next) => {
   try {
     const shopId = req.user?.shopId
 
@@ -67,7 +67,7 @@ const getTodaySession = async (req, res) => {
   }
 }
 
-const closeTodaySession = async (req, res) => {
+const closeTodaySession = async (req, res , next) => {
   try {
     const shopId = req.user?.shopId
     const userId = req.user?.id

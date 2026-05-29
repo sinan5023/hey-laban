@@ -3,7 +3,7 @@ const { sendSuccess, sendError } = require('../helpers/response')
 const kotService = require('../services/orders.kot.service')
 const ApiError = require('../helpers/apiError')
 
-const createKotHandler = async (req, res) => {
+const createKotHandler = async (req, res , next) => {
   try {
     const orderId = req.params.orderId
     const note = req.body?.note ?? null
