@@ -3,7 +3,7 @@ const router = express.Router();
 //validator
 const validate = require("../middlewares/validate.middleware");
 //API Validators
-const { createOrderSchema , listOrdersSchema  , getOrderByIdSchema , patchOrderSchema} = require("../validators/orders.validation");
+const { createOrderSchema , listOrdersSchema  , getOrderByIdSchema , patchOrderSchema , cancelOrderSchema} = require("../validators/orders.validation");
 const {createKotSchema} = require("../validators/orders.kot.validation")
 const {addPaymentsToOrderSchema} = require("../validators/orders.payments.validation")
 //Middlewares
@@ -23,6 +23,7 @@ router.patch("/:orderId",authMiddleware,salesSessionMiddleware,validate(patchOrd
 router.post("/:orderId/kot",authMiddleware,salesSessionMiddleware,validate(createKotSchema),kotController.createKotHandler)
 router.post("/:orderId/payments",authMiddleware,salesSessionMiddleware,validate(addPaymentsToOrderSchema),paymentsController.addPaymentsToOrderHandler)
 router.get("/:orderId/payments",authMiddleware,salesSessionMiddleware,paymentsController.getPaymentsByOrderIdHandler)
+router.post("/:orderId/cancel",authMiddleware ,salesSessionMiddleware,validate(cancelOrderSchema),orderController.cancelOrder)
 
 
 

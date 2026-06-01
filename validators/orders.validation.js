@@ -77,9 +77,40 @@ const patchOrderSchema = Joi.object({
   headers: Joi.object().unknown(true).optional(),
 }).meta({ className: "PatchOrderRequest" });
 
+
+const cancelOrderSchema = Joi.object({
+  params: Joi.object({
+    orderId: Joi.string().uuid().required().messages({
+      'string.base': 'orderId must be a string',
+      'string.empty': 'orderId is required',
+      'string.guid': 'orderId must be a valid UUID',
+      'any.required': 'orderId is required',
+    }),
+  }).required(),
+
+  body: Joi.object({
+    reason: Joi.string().trim().min(3).max(255).required().messages({
+      'string.base': 'reason must be a string',
+      'string.empty': 'reason is required',
+      'string.min': 'reason must be at least 3 characters long',
+      'string.max': 'reason cannot exceed 255 characters',
+      'any.required': 'reason is required',
+    }),
+  }).required(),
+
+  query: Joi.object({}).optional(),
+
+  headers: Joi.object({}).optional(),
+})
+
+module.exports = {
+  cancelOrderSchema,
+}
+
 module.exports = {
   createOrderSchema,
   listOrdersSchema,
   getOrderByIdSchema,
   patchOrderSchema,
+  cancelOrderSchema
 };

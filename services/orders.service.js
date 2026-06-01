@@ -406,9 +406,96 @@ const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
   });
 };
 
+const cancelOrderById = async ({ orderId, reason, shopId, sessionId, cancelledBy }) => {
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      shopId,
+      sessionId,
+    },
+    select: {
+      id: true,
+      orderNo: true,
+      status: true,
+      sessionId: true,
+      kotStatus: true,
+    },
+  })
+
+  if (!order) {
+    throw new ApiError(404, 'Order not found for the current session')
+  }
+
+  if (order.status === 'CANCELLED') {
+    throw new ApiError(400, 'Order is already cancelled')
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedOrder = await tx.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        status: 'CANCELLED',
+        kotStatus: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelReason: reason,
+      },
+      select: {
+        id: true,
+        orderNo: true,
+        status: true,
+        kotStatus: true,
+        sessionId: true,
+        cancelReason: true,
+        cancelledAt: true,
+        updatedAt: true,
+      },
+    })
+
+    await tx.kot.updateMany({
+      where: {
+        orderId,
+        shopId,
+        sessionId,
+        status: {
+          not: 'CANCELLED',
+        },
+      },
+      data: {
+        status: 'CANCELLED',
+      },
+    })
+
+    const cancelledKot = await tx.kot.findFirst({
+      where: {
+        orderId,
+        shopId,
+        sessionId,
+      },
+      select: {
+        id: true,
+        kotNo: true,
+        status: true,
+        printedAt: true,
+      },
+    })
+
+    return {
+      order: updatedOrder,
+      kot: cancelledKot,
+    }
+  })
+
+  return result
+}
+
+
+
 module.exports = {
   createOrder,
   listOrders,
   getOrderById,
   editOrderById,
+  cancelOrderById
 };

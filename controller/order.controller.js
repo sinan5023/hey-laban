@@ -101,4 +101,34 @@ const editOrderById = async (req, res, next) => {
   }
 };
 
-module.exports = { createOrder, listOrders, getOrderById, editOrderById };
+const cancelOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.params
+    const { reason } = req.body
+
+    const payload = {
+      orderId,
+      reason,
+      shopId: req.user.shopId,
+      sessionId: req.salesSession.id, // change to req.salesSession.id if that is your actual key
+      cancelledBy: req.user.id,
+    }
+
+    const data = await orderService.cancelOrderById(payload)
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: 'Order cancelled successfully',
+      data,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+module.exports = {
+  createOrder,
+  listOrders,
+  getOrderById,
+  editOrderById,
+  cancelOrder,
+};
