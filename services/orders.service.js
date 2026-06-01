@@ -224,7 +224,7 @@ const getOrderById = async ({ shopId, sessionId, orderId }) => {
           },
         },
       },
-      kots: {
+      kot: {
         where: {
           sessionId,
         },

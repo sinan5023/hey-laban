@@ -61,7 +61,7 @@ const refresh = async (req, res , next) => {
   }
 };
 
-const logout = async (req, res) => {
+const logout = async (req, res , next) => {
   try {
     const result = await authService.logout({
       refreshToken: req.cookies.refreshToken,
