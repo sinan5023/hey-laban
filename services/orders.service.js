@@ -121,41 +121,37 @@ const listOrders = async ({
   sortBy = "createdAt",
   sortDir = "DESC",
 }) => {
-  // Ensure page and limit are integers and ≥ 1
-  const pageNum = Math.max(1, parseInt(page, 10)) || 1;
-  const limitNum = Math.max(1, parseInt(limit, 10)) || 20;
-  const offset = (pageNum - 1) * limitNum;
+  const pageNum = Math.max(1, parseInt(page, 10)) || 1
+  const limitNum = Math.max(1, parseInt(limit, 10)) || 20
+  const offset = (pageNum - 1) * limitNum
 
-  // Build WHERE clause
   const whereClause = {
     shopId,
-    sessionId: session.id, // only today's session
-  };
+    sessionId: session.id,
+  }
 
   if (status) {
-    whereClause.status = status;
+    whereClause.status = status
   }
 
   if (kotStatus) {
-    whereClause.kotStatus = kotStatus;
+    whereClause.kotStatus = kotStatus
   }
 
-  // Build ORDER BY clause (Prisma likes lowercase asc/desc)
-  const orderByClause = {};
+  const orderByClause = {}
 
   switch (sortBy) {
     case "tokenNo":
-      orderByClause.tokenNo = sortDir.toLowerCase();
-      break;
+      orderByClause.tokenNo = sortDir.toLowerCase()
+      break
     case "totalAmount":
-      orderByClause.totalAmount = sortDir.toLowerCase();
-      break;
+      orderByClause.totalAmount = sortDir.toLowerCase()
+      break
     default:
-      orderByClause.createdAt = sortDir.toLowerCase();
-      break;
+      orderByClause.createdAt = sortDir.toLowerCase()
+      break
   }
 
-  // Fetch paginated order list (no items / payments for performance)
   const orders = await prisma.order.findMany({
     where: whereClause,
     orderBy: orderByClause,
@@ -174,11 +170,23 @@ const listOrders = async ({
       createdAt: true,
       completedAt: true,
       cancelledAt: true,
+      payments: {
+        select: {
+          method: true,
+          amount: true,
+          cashTendered: true,
+          changeAmount: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },  
+      },
     },
-  });
+  })
 
-  // Count total for pagination
-  const total = await prisma.order.count({ where: whereClause });
+  const total = await prisma.order.count({ where: whereClause })
 
   return {
     data: orders,
@@ -189,8 +197,8 @@ const listOrders = async ({
       hasNext: pageNum * limitNum < total,
       hasPrev: pageNum > 1,
     },
-  };
-};
+  }
+}
 
 const getOrderById = async ({ shopId, sessionId, orderId }) => {
   const order = await prisma.order.findFirst({
