@@ -183,6 +183,13 @@ const listOrders = async ({
           createdAt: "desc",
         },  
       },
+      kot:{
+        select:{
+          id:true,
+          kotNo:true,
+          timesPrinted:true,
+        }
+      }
     },
   })
 
