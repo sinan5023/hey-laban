@@ -19,6 +19,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.enable('trust proxy')
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://192.0.0.2:3000"],
