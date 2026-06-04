@@ -82,6 +82,7 @@ model User {
   password        String
   role            UserRole
   isActive        Boolean        @default(true) @map("is_active")
+  passwordChangedAt DateTime?      @map("password_changed_at") @db.Timestamptz(3)
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
 
   shop            Shop           @relation(fields: [shopId], references: [id])

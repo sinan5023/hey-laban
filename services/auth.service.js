@@ -76,7 +76,7 @@ const refresh = async ({ refreshToken, userAgent, ipAddress }) => {
     include: { user: true },
   });
 
-  if (!storedToken) {
+  if (!storedToken || storedToken.revokedAt) {
     throw new ApiError(401, "Invalid or expired refresh token");
   }
 

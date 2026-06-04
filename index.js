@@ -5,10 +5,11 @@ const cors = require("cors");
 
 // Routes
 const authApi = require("./Routes/auth.api");
-const catalogueApi = require("./Routes/Catalogue.api");
-const salesSessionApi = require("./Routes/SalesSession.api")
+const catalogueApi = require("./Routes/catalogue.api");
+const salesSessionApi = require("./Routes/salesSession.api")
 const ordersApi = require("./Routes/orders.api")
 const searchApi = require("./Routes/search.api")
+const profileApi = require("./Routes/profile.api")
 // Global error handlong middleware
 const errorHandler = require("./middlewares/globalErrorHandler.middleware")
 
@@ -40,6 +41,7 @@ app.use("/api/auth", authApi);
 app.use("/api/sales-session",salesSessionApi)
 app.use("/api/orders",ordersApi)
 app.use("/api/search",searchApi)
+app.use("/api/profile",profileApi)
 
 //global error handler 
 app.use(errorHandler)
