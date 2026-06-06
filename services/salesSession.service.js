@@ -25,7 +25,7 @@ const normalizeCategoryName = (value) => {
 const getTodaySalesSession = async ({ shopId }) => {
   const businessDate = getBusinessDate();
 
-  const session = prisma.salesSession.findUnique({
+  const session = await prisma.salesSession.findUnique({
     where: {
       shopId_date: {
         shopId,
@@ -67,8 +67,9 @@ const openSalesSession = async ({
   openingCash,
   openingNote,
 }) => {
-  const businessDate = getBusinessDate();
+  const businessDate = getBusinessDate()
 
+  // Check if session already exists for today's business date
   const existingSession = await prisma.salesSession.findUnique({
     where: {
       shopId_date: {
@@ -76,10 +77,30 @@ const openSalesSession = async ({
         date: businessDate,
       },
     },
-  });
+  })
 
   if (existingSession) {
-    throw new ApiError(409, "Sales session already exists for today");
+    throw new ApiError(409, "Sales session already exists for today")
+  }
+
+  // Check if previous date session is still open
+  const previousDate = new Date(businessDate)
+  previousDate.setDate(previousDate.getDate() - 1)
+
+  const previousSession = await prisma.salesSession.findUnique({
+    where: {
+      shopId_date: {
+        shopId,
+        date: previousDate,
+      },
+    },
+  })
+
+  if (previousSession && previousSession.status !== 'CLOSED') {
+    throw new ApiError(
+      409,
+      "Previous day's sales session is still open. Close it before opening a new session."
+    )
   }
 
   return prisma.salesSession.create({
@@ -100,8 +121,8 @@ const openSalesSession = async ({
       },
       expenses: true,
     },
-  });
-};
+  })
+}
 
 const closeTodaySalesSession = async ({
   shopId,

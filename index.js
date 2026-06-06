@@ -5,7 +5,7 @@ const cors = require("cors");
 
 // Routes
 const authApi = require("./Routes/auth.api");
-const catalogueApi = require("./Routes/catalogue.api");
+const catalogueApi = require("./Routes/items.api");
 const salesSessionApi = require("./Routes/salesSession.api")
 const ordersApi = require("./Routes/orders.api")
 const searchApi = require("./Routes/search.api")
@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.enable('trust proxy')
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://192.0.0.2:3000"],
+    origin: ["http://localhost:3000", "http://192.168.1.17:3000"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
