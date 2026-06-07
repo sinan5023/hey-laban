@@ -25,7 +25,7 @@ const createItemSchema = Joi.object({
       "number.min": "Price cannot be negative",
       "any.required": "Price is required",
     }),
-    sortOrder: Joi.number().integer().min(0).optional().default(0),
+    sortOrder: Joi.number().integer().min(0).optional().default(0).allow(null),
   }).required(),
 });
 

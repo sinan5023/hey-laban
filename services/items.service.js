@@ -55,6 +55,55 @@ const getCatalogue = async ({ shopId }) => {
 };
 
 // ========== PRODUCTS (new CRUD) ==========
+const getManagementCatalogue = async ({ shopId }) => {
+  if (!shopId) {
+    throw new ApiError(400, "Shop ID is required");
+  }
+
+  const categories = await prisma.category.findMany({
+    where: {
+      shopId,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      sortOrder: true,
+      isActive: true,
+      products: {
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          sortOrder: true,
+          isActive: true,
+          categoryId: true,
+        },
+      },
+    },
+  });
+
+  return {
+    categories: categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      sortOrder: category.sortOrder,
+      isActive: category.isActive,
+      products: category.products.map((product) => ({
+        id: product.id,
+        categoryId: product.categoryId,
+        name: product.name,
+        description: product.description,
+        price: product.price.toNumber(),
+        sortOrder: product.sortOrder,
+        isActive: product.isActive,
+      })),
+    })),
+  };
+};
+
 const createProduct = async ({ shopId, categoryId, name, description, price, sortOrder }) => {
   if (!name || !price) {
     throw new ApiError(400, "Name and price are required");
@@ -280,6 +329,7 @@ const toggleCategoryInactive = async ({ id, shopId, isActive }) => {
 
 module.exports = {
   getCatalogue,
+  getManagementCatalogue,
   createProduct,
   updateProduct,
   deleteProduct,

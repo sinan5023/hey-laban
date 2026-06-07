@@ -28,6 +28,7 @@ const {
 router.get("/catalogue",authMiddleware, validate(getCatalogueSchema), itemsController.getCatalogue);
 
 // ========== PRODUCTS ==========
+router.get("/catalogue/management",authMiddleware,validate(getCatalogueSchema),itemsController.getManagementCatalogue)
 router.post("/items", authMiddleware, validate(createItemSchema), itemsController.createItem);
 router.patch("/items/:id", authMiddleware, validate(updateItemSchema), itemsController.updateItem);
 router.delete("/items/:id", authMiddleware, validate(deleteItemSchema), itemsController.deleteItem);

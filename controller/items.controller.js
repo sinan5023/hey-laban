@@ -20,6 +20,25 @@ const getCatalogue = async (req, res, next) => {
 };
 
 // ========== PRODUCTS (new CRUD) ==========
+
+
+const getManagementCatalogue = async (req, res, next) => {
+  try {
+    const result = await itemsService.getManagementCatalogue({
+      shopId: req.user.shopId,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: "Management catalogue fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Get management catalogue error:", error);
+    next(error);
+  }
+};
+
 const createItem = async (req, res, next) => {
   try {
     const { categoryId, name, description, price, sortOrder } = req.body;
@@ -201,6 +220,7 @@ const toggleCategoryInactive = async (req, res, next) => {
 
 module.exports = {
   getCatalogue,
+  getManagementCatalogue,
   createItem,
   updateItem,
   deleteItem,
