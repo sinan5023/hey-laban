@@ -130,7 +130,7 @@ model Product {
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  category    Category?   @relation(fields: [categoryId], references: [id])
+  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
   kotItems    KotItem[]
 
@@ -140,6 +140,7 @@ model Product {
   @@index([categoryId, sortOrder])
   @@map("products")
 }
+
 
 model SalesSession {
   id                 String         @id @default(uuid()) @db.Uuid
@@ -259,7 +260,7 @@ model OrderItem {
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   order      Order     @relation(fields: [orderId], references: [id])
-  product    Product?  @relation(fields: [productId], references: [id])
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
@@ -302,13 +303,12 @@ model KotItem {
   note       String?
 
   kot        Kot       @relation(fields: [kotId], references: [id])
-  product    Product?  @relation(fields: [productId], references: [id])
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([kotId])
   @@index([productId])
   @@map("kot_items")
 }
-
 model Payment {
   id           String         @id @default(uuid()) @db.Uuid
   shopId       String         @map("shop_id") @db.Uuid

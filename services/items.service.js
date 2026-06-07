@@ -104,7 +104,14 @@ const getManagementCatalogue = async ({ shopId }) => {
   };
 };
 
-const createProduct = async ({ shopId, categoryId, name, description, price, sortOrder }) => {
+const createProduct = async ({
+  shopId,
+  categoryId,
+  name,
+  description,
+  price,
+  sortOrder,
+}) => {
   if (!name || !price) {
     throw new ApiError(400, "Name and price are required");
   }
@@ -133,7 +140,14 @@ const createProduct = async ({ shopId, categoryId, name, description, price, sor
   return product;
 };
 
-const updateProduct = async ({ id, shopId, name, description, price, sortOrder }) => {
+const updateProduct = async ({
+  id,
+  shopId,
+  name,
+  description,
+  price,
+  sortOrder,
+}) => {
   if (!id) {
     throw new ApiError(400, "Product ID is required");
   }
@@ -161,7 +175,8 @@ const updateProduct = async ({ id, shopId, name, description, price, sortOrder }
     where: { id },
     data: {
       name: name || existingProduct.name,
-      description: description !== undefined ? description : existingProduct.description,
+      description:
+        description !== undefined ? description : existingProduct.description,
       price: price || existingProduct.price,
       sortOrder: sortOrder || existingProduct.sortOrder,
     },
@@ -175,7 +190,6 @@ const deleteProduct = async ({ id, shopId }) => {
     throw new ApiError(400, "Product ID is required");
   }
 
-  // Verify product exists
   const existingProduct = await prisma.product.findFirst({
     where: { id },
   });
@@ -184,13 +198,20 @@ const deleteProduct = async ({ id, shopId }) => {
     throw new ApiError(404, "Product not found");
   }
 
-  // Soft delete: set isActive to false
-  const product = await prisma.product.update({
+  // Hard delete the product.
+  // OrderItem and KotItem rows are kept, productId becomes NULL.
+  await prisma.product.delete({
     where: { id },
-    data: { isActive: false },
   });
 
-  return { success: true, message: "Product deleted successfully", product };
+  return {
+    success: true,
+    message: "Product deleted successfully",
+  };
+};
+
+module.exports = {
+  deleteProduct,
 };
 
 const toggleProductInactive = async ({ id, shopId, isActive }) => {
@@ -286,20 +307,30 @@ const deleteCategory = async ({ id, shopId }) => {
   }
 
   const existingCategory = await prisma.category.findFirst({
-    where: { id },
+    where: {
+      id,
+      shopId, // ensure it belongs to this shop
+    },
   });
 
   if (!existingCategory) {
     throw new ApiError(404, "Category not found");
   }
 
-  // Soft delete: set isActive to false
-  const category = await prisma.category.update({
+  // Hard delete the category.
+  // Products in this category will be cascade-deleted automatically.
+  await prisma.category.delete({
     where: { id },
-    data: { isActive: false },
   });
 
-  return { success: true, message: "Category deleted successfully", category };
+  return {
+    success: true,
+    message: "Category and its products deleted successfully",
+  };
+};
+
+module.exports = {
+  deleteCategory,
 };
 
 const toggleCategoryInactive = async ({ id, shopId, isActive }) => {
