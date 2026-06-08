@@ -38,7 +38,6 @@ const createSalesSession = async (req, res , next) => {
       data: session,
     })
   } catch (error) {
-   console.log(error)
    next(error)
   }
 }
@@ -62,7 +61,6 @@ const getTodaySession = async (req, res , next) => {
       data: session,
     })
   } catch (error) {
-    console.log(error)
     next(error)
   }
 }
@@ -100,7 +98,6 @@ const closeTodaySession = async (req, res , next) => {
       data: session,
     })
   } catch (error) {
-    console.log(error)
     next(error)
   }
 }

@@ -2,6 +2,7 @@ const { Prisma, SessionStatus, ExpenseEntryType } = require("@prisma/client");
 const prisma = require("../lib/prisma");
 const ApiError = require("../helpers/ApiError");
 const getBusinessDate = require("../helpers/getBusinessDate");
+const getCloseBusinessDate = require("../helpers/businessDateForClose")
 
 const toDecimal = (value, fieldName = "amount") => {
   if (value === undefined || value === null || value === "") {
@@ -141,7 +142,7 @@ const closeTodaySalesSession = async ({
   // if (unsettled > 0) {
   //   throw new ApiError(400, `${unsettled} orders are unsettled. Settle all orders before closing the session.`);
   // }
-  const businessDate = getBusinessDate();
+  const businessDate = getCloseBusinessDate();
   const normalizedExpenses = Array.isArray(expenses) ? expenses : [];
 
   for (const expense of normalizedExpenses) {

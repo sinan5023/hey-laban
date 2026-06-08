@@ -39,7 +39,7 @@ const createOrder = async ({
 
     const tokenNo = counter.lastToken;
     const nextOrderNum = counter.lastOrder;
-    const orderNo = `ORD-${String(nextOrderNum).padStart(4, "0")}`;
+    const orderNo = `ORD-${String(nextOrderNum)}`;
 
     const productIds = items.map((item) => item.productId);
 

@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.enable('trust proxy')
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://192.168.1.17:3000"],
+    origin: ["http://localhost:3000","https://2l3t23t3-3000.inc1.devtunnels.ms"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
