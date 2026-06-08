@@ -504,6 +504,172 @@ const cancelOrderById = async ({ orderId, reason, shopId, sessionId, cancelledBy
 
   return result
 }
+/**
+ * Creates an order AND a KOT in a single transaction.
+ * Eliminates the second network round-trip from the frontend.
+ */
+const createOrderWithKot = async ({
+  shopId,
+  session,
+  items,
+  note,
+  orderType = "DINE_IN",
+  discountAmount = 0,
+  kotNote,
+  createdById,
+}) => {
+  return await prisma.$transaction(async (tx) => {
+    const { id: sessionId, date } = session;
+
+    // ── 1. Bump counters for order, token, AND KOT in one query ──
+    const counter = await tx.dailyCounter.upsert({
+      where: {
+        shopId_date: {
+          shopId,
+          date,
+        },
+      },
+      update: {
+        lastToken: { increment: 1 },
+        lastOrder: { increment: 1 },
+        lastKot: { increment: 1 },
+      },
+      create: {
+        shopId,
+        date,
+        lastToken: 1,
+        lastOrder: 1,
+        lastKot: 1,
+      },
+      select: {
+        lastToken: true,
+        lastOrder: true,
+        lastKot: true,
+      },
+    });
+
+    const tokenNo = counter.lastToken;
+    const orderNo = `ORD-${String(counter.lastOrder)}`;
+    const kotNo = `KOT-${String(counter.lastKot).padStart(4, "0")}`;
+
+    // ── 2. Resolve product prices ──
+    const productIds = items.map((item) => item.productId);
+
+    const products = await tx.product.findMany({
+      where: {
+        id: { in: productIds },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+      },
+    });
+
+    if (products.length !== productIds.length) {
+      const foundIds = new Set(products.map((p) => p.id));
+      const missingIds = productIds.filter((id) => !foundIds.has(id));
+      throw new ApiError(
+        400,
+        `Invalid or inactive product IDs: ${missingIds.join(", ")}`,
+      );
+    }
+
+    // ── 3. Build order items ──
+    let subtotal = 0;
+
+    const orderItems = items.map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      const itemTotal = Number(product.price) * Number(item.quantity);
+      subtotal += itemTotal;
+
+      return {
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: item.quantity,
+        total: itemTotal,
+        note: item.note || null,
+      };
+    });
+
+    const totalAmount = Math.max(0, subtotal - Number(discountAmount));
+
+    // ── 4. Create the order ──
+    const order = await tx.order.create({
+      data: {
+        shopId,
+        sessionId,
+        orderNo,
+        tokenNo,
+        orderType,
+        status: "OPEN",
+        kotStatus: "PRINTED",
+        subtotal,
+        discountAmount,
+        totalAmount,
+        note: note || null,
+        orderItems: {
+          create: orderItems,
+        },
+      },
+      include: {
+        orderItems: true,
+      },
+    });
+
+    // ── 5. Create the KOT ──
+    const kot = await tx.kot.create({
+      data: {
+        shopId,
+        sessionId,
+        orderId: order.id,
+        kotNo,
+        status: "PRINTED",
+        timesPrinted: 1,
+        note: kotNote ?? null,
+        createdById: createdById ?? null,
+        kotItems: {
+          create: order.orderItems.map((item) => ({
+            productId: item.productId ?? null,
+            name: item.name,
+            quantity: item.quantity,
+            note: item.note ?? null,
+          })),
+        },
+      },
+      include: {
+        kotItems: true,
+      },
+    });
+
+    // ── 6. Return both in one response ──
+    return {
+      order,
+      kot: {
+        id: kot.id,
+        sessionId: kot.sessionId,
+        orderId: kot.orderId,
+        orderNo: order.orderNo,
+        tokenNo: order.tokenNo,
+        kotNo: kot.kotNo,
+        status: kot.status,
+        timesPrinted: kot.timesPrinted,
+        note: kot.note,
+        printedAt: kot.printedAt,
+        kotItems: kot.kotItems.map((item) => ({
+          id: item.id,
+          kotId: item.kotId,
+          productId: item.productId,
+          name: item.name,
+          quantity: Number(item.quantity),
+          note: item.note,
+        })),
+      },
+    };
+  });
+};
 
 
 
@@ -512,5 +678,6 @@ module.exports = {
   listOrders,
   getOrderById,
   editOrderById,
-  cancelOrderById
+  cancelOrderById,
+  createOrderWithKot,
 };
