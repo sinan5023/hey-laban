@@ -11,6 +11,7 @@ const createOrderSchema = Joi.object({
     note: Joi.string().allow(null, "").optional(),
     discountAmount: Joi.number().min(0).optional().default(0),
     items: Joi.array().items(orderItemSchema).min(1).required(),
+    kotNote: Joi.string().allow(null, "").optional(),
   }).required(),
 });
 

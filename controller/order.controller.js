@@ -125,10 +125,39 @@ const cancelOrder = async (req, res, next) => {
     next(error)
   }
 }
+
+const createOrderWithKot = async (req, res, next) => {
+  try {
+    const shopId = req.user.shopId;
+    const { note, discountAmount = 0, items, orderType, kotNote } = req.body;
+
+    const result = await orderService.createOrderWithKot({
+      shopId,
+      session: req.salesSession,
+      items,
+      note,
+      orderType,
+      discountAmount,
+      kotNote: kotNote || null,
+      createdById: req.user.id,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 201,
+      message: "Order and KOT created successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("createOrderWithKot error:", error);
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   listOrders,
   getOrderById,
   editOrderById,
   cancelOrder,
+  createOrderWithKot,
 };

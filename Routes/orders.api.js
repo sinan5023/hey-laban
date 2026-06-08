@@ -15,6 +15,7 @@ const kotController = require("../controller/orders.kot.controller")
 const paymentsController = require("../controller/orders.payments.controller")
 
 router.post("/",authMiddleware,salesSessionMiddleware,validate(createOrderSchema), orderController.createOrder);
+router.post("/create-with-kot",authMiddleware,salesSessionMiddleware,validate(createOrderSchema), orderController.createOrderWithKot);
 router.get("/",authMiddleware,salesSessionMiddleware,validate(listOrdersSchema),orderController.listOrders)
 router.get("/kot",authMiddleware,salesSessionMiddleware,kotController.listKotsHandler)
 router.get("/kot/:kotId",authMiddleware,salesSessionMiddleware,kotController.getKotByIdHandler)
