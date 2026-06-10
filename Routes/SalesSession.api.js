@@ -13,7 +13,7 @@ const validate = require("../middlewares/validate.middleware");
 const salesSessionValidator = require("../validators/salesSession.validation")
 
 router.post("/",authMiddleware,validate(salesSessionValidator.openSalesSessionSchema),salesSessionController.createSalesSession)
-router.patch("/today",authMiddleware,validate(salesSessionValidator.closeSalesSessionSchema),salesSessionMiddleware,salesSessionController.closeTodaySession)
+router.patch("/",authMiddleware,validate(salesSessionValidator.closeSalesSessionSchema),salesSessionMiddleware,salesSessionController.closeTodaySession)
 router.get("/today",authMiddleware,salesSessionController.getTodaySession)
-
+router.get("/overview",authMiddleware,validate(salesSessionValidator.getSalesSessionOverviewSchema),salesSessionController.getSalesSessionOverview)
 module.exports = router

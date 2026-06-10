@@ -57,8 +57,28 @@ const openSalesSessionSchema = Joi.object({
   params: Joi.object({}).optional(),
 });
 
+const getSalesSessionOverviewSchema = Joi.object({
+  body: Joi.object({}).optional(),
+
+  query: Joi.object({
+    preset: Joi.string()
+      .valid('previous', 'current')
+      .required()
+      .messages({
+        'any.required': 'preset query parameter is required',
+        'any.only': 'preset must be either "previous" or "current"',
+        'string.base': 'preset must be a string',
+      }),
+  }).required(),
+
+  params: Joi.object({}).optional(),
+
+  headers: Joi.object({}).optional(),
+});
+
 module.exports = {
   getTodaySalesSessionSchema,
   closeSalesSessionSchema,
-  openSalesSessionSchema
+  openSalesSessionSchema,
+  getSalesSessionOverviewSchema
 };

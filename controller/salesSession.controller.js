@@ -1,9 +1,5 @@
 const { sendSuccess, sendError } = require('../helpers/response')
-const {
-  openSalesSession,
-  getTodaySalesSession,
-  closeTodaySalesSession,
-} = require('../services/salesSession.service')
+const salesSessionService = require('../services/salesSession.service')
 
 const createSalesSession = async (req, res , next) => {
   try {
@@ -25,7 +21,7 @@ const createSalesSession = async (req, res , next) => {
       })
     }
 
-    const session = await openSalesSession({
+    const session = await salesSessionService.openSalesSession({
       shopId,
       userId,
       openingCash,
@@ -53,7 +49,7 @@ const getTodaySession = async (req, res , next) => {
       })
     }
 
-    const session = await getTodaySalesSession({ shopId })
+    const session = await salesSessionService.getTodaySalesSession({ shopId })
 
     return sendSuccess(res, {
       statusCode: 200,
@@ -85,7 +81,7 @@ const closeTodaySession = async (req, res , next) => {
       })
     }
 
-    const session = await closeTodaySalesSession({
+    const session = await salesSessionService.closeTodaySalesSession({
       shopId,
       userId,
       closingNote,
@@ -102,8 +98,46 @@ const closeTodaySession = async (req, res , next) => {
   }
 }
 
+const getSalesSessionOverview = async (req, res, next) => {
+  try {
+    const shopId = req.user?.shopId;
+    const preset = (req.query?.preset || '').toLowerCase();
+
+    if (!shopId) {
+      return sendError(res, {
+        statusCode: 401,
+        message: 'Shop context not found in authenticated user',
+        error: null,
+      });
+    }
+
+    if (!['previous', 'current'].includes(preset)) {
+      return sendError(res, {
+        statusCode: 400,
+        message: 'Invalid preset. Allowed values are "previous" or "current".',
+        error: null,
+      });
+    }
+
+    const data =
+      preset === 'previous'
+        ? await salesSessionService.getPreviousSessionOverview({ shopId })
+        : await salesSessionService.getCurrentSessionOverview({ shopId });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: 'Sales session overview fetched successfully',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 module.exports = {
   createSalesSession,
-  getTodaySession,
   closeTodaySession,
+  getTodaySession,
+  getSalesSessionOverview
 }

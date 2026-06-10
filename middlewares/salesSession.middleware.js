@@ -1,6 +1,5 @@
 const prisma = require('../lib/prisma')
 const { sendError } = require('../helpers/response')
-const getBusinessDate = require('../helpers/getBusinessDate')
 
 const requireOpenSalesSession = async (req, res, next) => {
   try {
@@ -14,15 +13,14 @@ const requireOpenSalesSession = async (req, res, next) => {
       })
     }
 
-    const businessDate = getBusinessDate()
-
-    // Look for today's (operational business date) session
-    const session = await prisma.salesSession.findUnique({
+    // Find the currently open session for this shop (regardless of date)
+    const session = await prisma.salesSession.findFirst({
       where: {
-        shopId_date: {
-          shopId,
-          date: businessDate,
-        },
+        shopId,
+        status: 'OPEN',
+      },
+      orderBy: {
+        openedAt: 'desc',
       },
       select: {
         id: true,
@@ -34,57 +32,18 @@ const requireOpenSalesSession = async (req, res, next) => {
       },
     })
 
-    // Today's session exists and is open — happy path
-    if (session && session.status === 'OPEN') {
-      req.salesSession = session
-      return next()
-    }
-
-    // Today's session exists but is closed
-    if (session && session.status !== 'OPEN') {
+    if (!session) {
+      // No open session at all
       return sendError(res, {
         statusCode: 409,
-        message: "Today's sales session is already closed. Transactions are not allowed.",
+        message: "Today's sales session is not opened. Open a session before performing transactions.",
         error: null,
       })
     }
 
-    // No session for today's business date — check if previous date session is still open
-    const previousDate = new Date(businessDate)
-    previousDate.setDate(previousDate.getDate() - 1)
-
-    const previousSession = await prisma.salesSession.findUnique({
-      where: {
-        shopId_date: {
-          shopId,
-          date: previousDate,
-        },
-      },
-      select: {
-        id: true,
-        shopId: true,
-        date: true,
-        status: true,
-        openedAt: true,
-        closedAt: true,
-      },
-    })
-
-    if (previousSession && previousSession.status === 'OPEN') {
-      return sendError(res, {
-        statusCode: 409,
-        message:
-          "Previous day's sales session is still open. Close it before performing any transactions.",
-        error: null,
-      })
-    }
-
-    // No session at all for today
-    return sendError(res, {
-      statusCode: 409,
-      message: "Today's sales session is not opened. Open a session before performing transactions.",
-      error: null,
-    })
+    // Happy path: there is an open session
+    req.salesSession = session
+    return next()
   } catch (error) {
     return sendError(res, {
       statusCode: 500,
