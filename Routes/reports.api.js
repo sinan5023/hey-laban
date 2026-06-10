@@ -1,25 +1,46 @@
 const express = require("express");
 const router = express.Router();
-//controllers
+
+// controllers
 const reportController = require("../controller/reports.controller");
-//middlewares
+
+// middlewares
 const authMiddleware = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
-//validators
 
-const { overviewReportSchema,reportOrdersSchema } = require("../validators/reports.validation");
+// validators
+const {
+  sessionOrDateRangeSchema,
+  reportOrdersSchema,
+  closedSalesSessionsSchema,
+} = require("../validators/reports.validation");
 
 router.get(
-  "/overview",
+  "/sales-session",
   authMiddleware,
-  validate(overviewReportSchema),
-  reportController.getOverviewReport,
+  validate(closedSalesSessionsSchema),
+  reportController.getClosedSalesSessions,
 );
+
 router.get(
   "/orders",
   authMiddleware,
   validate(reportOrdersSchema),
   reportController.getReportOrders,
+);
+
+router.get(
+  "/sales-summary",
+  authMiddleware,
+  validate(sessionOrDateRangeSchema),
+  reportController.getSalesSummary,
+);
+
+router.get(
+  "/business-report",
+  authMiddleware,
+  validate(sessionOrDateRangeSchema),
+  reportController.getBusinessReport,
 );
 
 module.exports = router;

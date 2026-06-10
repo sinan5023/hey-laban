@@ -120,7 +120,7 @@ const createKot = async ({ shopId, orderId, note, createdById, salesSessionId })
       },
     })
 
-    const kotNo = `KOT-${String(counter.lastKot).padStart(4, "0")}`
+    const kotNo = `KOT-${String(counter.lastKot)}`
 
     const kot = await tx.kot.create({
       data: {
