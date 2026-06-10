@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const { sendError } = require('../helpers/response')
+const getBusinessDate = require('../helpers/getBusinessDate')
 
 const requireOpenSalesSession = async (req, res, next) => {
   try {
@@ -37,6 +38,18 @@ const requireOpenSalesSession = async (req, res, next) => {
       return sendError(res, {
         statusCode: 409,
         message: "Today's sales session is not opened. Open a session before performing transactions.",
+        error: null,
+      })
+    }
+
+    const currentBusinessDate = getBusinessDate()
+
+    const isClosingSession = req.originalUrl.includes('/sales-session') && req.method === 'PATCH'
+
+    if (!isClosingSession && session.date.getTime() !== currentBusinessDate.getTime()) {
+      return sendError(res, {
+        statusCode: 409,
+        message: 'The current open session belongs to a previous business day. Please close it and open a new session for today.',
         error: null,
       })
     }
