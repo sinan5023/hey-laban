@@ -12,8 +12,8 @@ async function main() {
     update: {},
     create: {
       id: "11111111-1111-1111-1111-111111111111",
-      name: "Hey Laban Sweets",
-      address: "Kanayannur, Kerala",
+      name: "Hey Laban",
+      address: "Edavannapara, Malappuram, Kerala",
       phone: "9876543210",
       email: "shop@heylaban.com",
     },
@@ -100,60 +100,60 @@ async function main() {
       sortOrder: 7,
     },
 
-    { category: "Qashtutah", name: "Mango", price: 350, sortOrder: 1 },
+    { category: "Qashtutah", name: "Mango Qashtutah", price: 350, sortOrder: 1 },
     {
       category: "Qashtutah",
-      name: "Pistachio Nutella",
+      name: "Pistachio Nutella Qashtutah",
       price: 350,
       sortOrder: 2,
     },
 
-    { category: "Shakes", name: "Nutella", price: 150, sortOrder: 1 },
-    { category: "Shakes", name: "Pistachio", price: 150, sortOrder: 2 },
-    { category: "Shakes", name: "Lotus", price: 150, sortOrder: 3 },
-    { category: "Shakes", name: "Hot Chocolate", price: 129, sortOrder: 4 },
+    { category: "Shakes", name: "Nutella Shakes", price: 150, sortOrder: 1 },
+    { category: "Shakes", name: "Pistachio Shakes", price: 150, sortOrder: 2 },
+    { category: "Shakes", name: "Lotus Shakes", price: 150, sortOrder: 3 },
+    { category: "Shakes", name: "Hot Chocolate Shakes", price: 129, sortOrder: 4 },
 
-    { category: "Koshari", name: "Trio", price: 350, sortOrder: 1 },
-    { category: "Koshari", name: "Pistachio Lotus", price: 350, sortOrder: 2 },
-    { category: "Koshari", name: "Kinder Nutella", price: 350, sortOrder: 3 },
+    { category: "Koshari", name: "Trio Koshari", price: 350, sortOrder: 1 },
+    { category: "Koshari", name: "Pistachio Lotus Koshari", price: 350, sortOrder: 2 },
+    { category: "Koshari", name: "Kinder Nutella Koshari", price: 350, sortOrder: 3 },
     {
       category: "Koshari",
-      name: "Pistachio Nutella",
+      name: "Pistachio Nutella Koshari",
       price: 350,
       sortOrder: 4,
     },
 
     {
       category: "Salankatiya",
-      name: "Pistachio Nutella",
+      name: "Pistachio Nutella Salankatiya",
       price: 350,
       sortOrder: 1,
     },
     {
       category: "Salankatiya",
-      name: "Pistachio Lotus",
+      name: "Pistachio Lotus Salankatiya",
       price: 350,
       sortOrder: 2,
     },
-    { category: "Salankatiya", name: "Trio", price: 350, sortOrder: 3 },
+    { category: "Salankatiya", name: "Trio Salankatiya", price: 350, sortOrder: 3 },
 
     {
       category: "Louah",
-      name: "Nutella Pistachio Kinder",
+      name: "Nutella Pistachio Kinder Louah",
       price: 350,
       sortOrder: 1,
     },
-    { category: "Louah", name: "Chocolate Kinder", price: 350, sortOrder: 2 },
+    { category: "Louah", name: "Chocolate Kinder Louah", price: 350, sortOrder: 2 },
 
     {
       category: "Hebba Cakes",
-      name: "Belgium Chocolate",
+      name: "Belgium Chocolate Hebba Cake",
       price: 390,
       sortOrder: 1,
     },
-    { category: "Hebba Cakes", name: "Kinder", price: 350, sortOrder: 2 },
-    { category: "Hebba Cakes", name: "Pistachio", price: 350, sortOrder: 3 },
-    { category: "Hebba Cakes", name: "Chocolate", price: 350, sortOrder: 4 },
+    { category: "Hebba Cakes", name: "Kinder Hebba Cake", price: 350, sortOrder: 2 },
+    { category: "Hebba Cakes", name: "Pistachio Hebba Cake", price: 350, sortOrder: 3 },
+    { category: "Hebba Cakes", name: "Chocolate Hebba Cake", price: 350, sortOrder: 4 },
   ];
 
   await prisma.product.deleteMany({

@@ -224,7 +224,7 @@ const closeTodaySalesSession = async ({
     //     status: { in: ["OPEN", "DUE"] },
     //   },
     // });
-    //
+    
     // if (unsettled > 0) {
     //   throw new ApiError(
     //     400,
@@ -316,6 +316,7 @@ const requireTodayOpenSession = async ({ shopId }) => {
   return session;
 };
 const toNumber = (d) => (d ? Number(d) : 0);
+const roundToTwo = (value) => Number(toNumber(value).toFixed(2));
 
 const getPreviousSessionOverview = async ({ shopId }) => {
   const session = await prisma.salesSession.findFirst({
@@ -332,14 +333,19 @@ const getPreviousSessionOverview = async ({ shopId }) => {
 
   const sessionId = session.id;
 
-  const [orders, payments, cashExpensesAgg] = await Promise.all([
+  const [orders, cashExpensesAgg] = await Promise.all([
     prisma.order.findMany({
       where: { shopId, sessionId },
-      select: { id: true, status: true, totalAmount: true, createdAt: true },
-    }),
-    prisma.payment.findMany({
-      where: { shopId, sessionId, status: PaymentStatus.COMPLETED },
-      select: { method: true, amount: true },
+      select: {
+        id: true,
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        payments: {
+          where: { status: PaymentStatus.COMPLETED },
+          select: { method: true, amount: true },
+        },
+      },
     }),
     prisma.expense.aggregate({
       where: { shopId, sessionId, entryType: "SESSION" },
@@ -347,62 +353,77 @@ const getPreviousSessionOverview = async ({ shopId }) => {
     }),
   ]);
 
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter(
+  const totalOrderCount = orders.length;
+  const completedOrdersCount = orders.filter(
     (o) => o.status === OrderStatus.COMPLETED,
   ).length;
-  const cancelledOrders = orders.filter(
+  const cancelledOrderCount = orders.filter(
     (o) => o.status === OrderStatus.CANCELLED,
   ).length;
-  const dueOrders = orders.filter((o) => o.status === OrderStatus.DUE).length;
 
-  const totalRevenueDecimal = orders
-    .filter((o) => o.status === OrderStatus.COMPLETED)
-    .reduce((acc, o) => acc.plus(o.totalAmount), new Prisma.Decimal(0));
+  const nonCancelledOrders = orders.filter(
+    (o) => o.status !== OrderStatus.CANCELLED,
+  );
 
-  const outstandingLiabilityDecimal = orders
-    .filter((o) => o.status === OrderStatus.DUE)
-    .reduce((acc, o) => acc.plus(o.totalAmount), new Prisma.Decimal(0));
+  const totalRevenueAmount = nonCancelledOrders.reduce(
+    (sum, o) => sum + toNumber(o.totalAmount),
+    0,
+  );
 
-  const totalRevenue = toNumber(totalRevenueDecimal);
-  const outstandingLiability = toNumber(outstandingLiabilityDecimal);
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const avgOrderValue =
+    nonCancelledOrders.length > 0
+      ? totalRevenueAmount / nonCancelledOrders.length
+      : 0;
 
-  // Peak hour (by order count)
-  const ordersByHour = new Map();
-  orders.forEach((o) => {
-    const hour = o.createdAt.getHours();
-    ordersByHour.set(hour, (ordersByHour.get(hour) || 0) + 1);
+  const paymentBreakdown = { cash: 0, upi: 0, card: 0 };
+  let totalCollectedPayments = 0;
+  let liabilityAmount = 0;
+  let dueOrderCount = 0;
+
+  const hourlyOrderCountMap = {};
+
+  nonCancelledOrders.forEach((order) => {
+    const orderTotal = toNumber(order.totalAmount);
+
+    const paidAmount = order.payments.reduce((sum, payment) => {
+      const amount = toNumber(payment.amount);
+
+      totalCollectedPayments += amount;
+
+      if (payment.method === PaymentMethod.CASH) {
+        paymentBreakdown.cash += amount;
+      } else if (payment.method === PaymentMethod.UPI) {
+        paymentBreakdown.upi += amount;
+      } else if (payment.method === PaymentMethod.CARD) {
+        paymentBreakdown.card += amount;
+      }
+
+      return sum + amount;
+    }, 0);
+
+    const outstandingAmount = Math.max(orderTotal - paidAmount, 0);
+
+    if (outstandingAmount > 0) {
+      dueOrderCount += 1;
+      liabilityAmount += outstandingAmount;
+    }
+
+    const hour = new Date(order.createdAt).getHours();
+    hourlyOrderCountMap[hour] = (hourlyOrderCountMap[hour] || 0) + 1;
   });
 
-  let peakHour = null;
-  if (ordersByHour.size > 0) {
-    let bestHour = null;
-    let bestCount = -1;
-    ordersByHour.forEach((count, hour) => {
-      if (count > bestCount) {
-        bestCount = count;
-        bestHour = hour;
-      }
-    });
-    peakHour = { hour: bestHour, orders: bestCount };
-  }
-
-  const sumPayments = (method) =>
-    toNumber(
-      payments
-        .filter((p) => p.method === method)
-        .reduce((acc, p) => acc.plus(p.amount), new Prisma.Decimal(0)),
-    );
-
-  const cashCollected = sumPayments(PaymentMethod.CASH);
-  const upiCollected = sumPayments(PaymentMethod.UPI);
-  const cardCollected = sumPayments(PaymentMethod.CARD);
-  const totalCollected = cashCollected + upiCollected + cardCollected;
+  const peakHours = Object.entries(hourlyOrderCountMap)
+    .map(([hour, orderCount]) => ({
+      hour: `${String(hour).padStart(2, "0")}:00`,
+      orderCount,
+    }))
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 3);
 
   const cashExpenses = toNumber(cashExpensesAgg._sum.amount);
   const openingCash = toNumber(session.openingCash);
-  const expectedCashInDrawer = openingCash + cashCollected - cashExpenses;
+  const expectedCashInDrawer =
+    openingCash + paymentBreakdown.cash - cashExpenses;
 
   return {
     preset: "previous",
@@ -413,29 +434,34 @@ const getPreviousSessionOverview = async ({ shopId }) => {
       openedBy: session.openedBy
         ? { id: session.openedBy.id, name: session.openedBy.name }
         : null,
-      openingCash,
+      openingCash: roundToTwo(openingCash),
     },
-    summary: {
-      totalOrders,
-      completedOrders,
-      cancelledOrders,
-      dueOrders,
-      outstandingLiability,
-      totalRevenue,
-      averageOrderValue,
-      peakHour,
-      collections: {
-        totalCollected,
-        cashCollected,
-        upiCollected,
-        cardCollected,
+    orders: {
+      totalOrderCount,
+      completedOrdersCount,
+      cancelledOrderCount,
+      dueOrderCount,
+      totalRevenueAmount: roundToTwo(totalRevenueAmount),
+      avgOrderValue: roundToTwo(avgOrderValue),
+      peakHours,
+    },
+    payments: {
+      totalCollectedPayments: roundToTwo(totalCollectedPayments),
+      paymentBreakdown: {
+        cash: roundToTwo(paymentBreakdown.cash),
+        upi: roundToTwo(paymentBreakdown.upi),
+        card: roundToTwo(paymentBreakdown.card),
       },
-      cashDrawer: {
-        openingCash,
-        cashCollected,
-        cashExpenses,
-        expectedCashInDrawer,
+      liability: {
+        unpaidOrderCount: dueOrderCount,
+        unpaidAmount: roundToTwo(liabilityAmount),
       },
+    },
+    cashDrawer: {
+      openingCash: roundToTwo(openingCash),
+      cashCollected: roundToTwo(paymentBreakdown.cash),
+      cashExpenses: roundToTwo(cashExpenses),
+      expectedCashInDrawer: roundToTwo(expectedCashInDrawer),
     },
   };
 };
@@ -500,15 +526,20 @@ const getCurrentSessionOverview = async ({ shopId }) => {
 
   const sessionId = session.id;
 
-  // Reuse the exact same metric computation as previous:
-  const [orders, payments, cashExpensesAgg] = await Promise.all([
+  // Reuse the exact same metric computation as report overview:
+  const [orders, cashExpensesAgg] = await Promise.all([
     prisma.order.findMany({
       where: { shopId, sessionId },
-      select: { id: true, status: true, totalAmount: true, createdAt: true },
-    }),
-    prisma.payment.findMany({
-      where: { shopId, sessionId, status: PaymentStatus.COMPLETED },
-      select: { method: true, amount: true },
+      select: {
+        id: true,
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+        payments: {
+          where: { status: PaymentStatus.COMPLETED },
+          select: { method: true, amount: true },
+        },
+      },
     }),
     prisma.expense.aggregate({
       where: { shopId, sessionId, entryType: "SESSION" },
@@ -516,61 +547,77 @@ const getCurrentSessionOverview = async ({ shopId }) => {
     }),
   ]);
 
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter(
+  const totalOrderCount = orders.length;
+  const completedOrdersCount = orders.filter(
     (o) => o.status === OrderStatus.COMPLETED,
   ).length;
-  const cancelledOrders = orders.filter(
+  const cancelledOrderCount = orders.filter(
     (o) => o.status === OrderStatus.CANCELLED,
   ).length;
-  const dueOrders = orders.filter((o) => o.status === OrderStatus.DUE).length;
 
-  const totalRevenueDecimal = orders
-    .filter((o) => o.status === OrderStatus.COMPLETED)
-    .reduce((acc, o) => acc.plus(o.totalAmount), new Prisma.Decimal(0));
+  const nonCancelledOrders = orders.filter(
+    (o) => o.status !== OrderStatus.CANCELLED,
+  );
 
-  const outstandingLiabilityDecimal = orders
-    .filter((o) => o.status === OrderStatus.DUE)
-    .reduce((acc, o) => acc.plus(o.totalAmount), new Prisma.Decimal(0));
+  const totalRevenueAmount = nonCancelledOrders.reduce(
+    (sum, o) => sum + toNumber(o.totalAmount),
+    0,
+  );
 
-  const totalRevenue = toNumber(totalRevenueDecimal);
-  const outstandingLiability = toNumber(outstandingLiabilityDecimal);
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const avgOrderValue =
+    nonCancelledOrders.length > 0
+      ? totalRevenueAmount / nonCancelledOrders.length
+      : 0;
 
-  const ordersByHour = new Map();
-  orders.forEach((o) => {
-    const hour = o.createdAt.getHours();
-    ordersByHour.set(hour, (ordersByHour.get(hour) || 0) + 1);
+  const paymentBreakdown = { cash: 0, upi: 0, card: 0 };
+  let totalCollectedPayments = 0;
+  let liabilityAmount = 0;
+  let dueOrderCount = 0;
+
+  const hourlyOrderCountMap = {};
+
+  nonCancelledOrders.forEach((order) => {
+    const orderTotal = toNumber(order.totalAmount);
+
+    const paidAmount = order.payments.reduce((sum, payment) => {
+      const amount = toNumber(payment.amount);
+
+      totalCollectedPayments += amount;
+
+      if (payment.method === PaymentMethod.CASH) {
+        paymentBreakdown.cash += amount;
+      } else if (payment.method === PaymentMethod.UPI) {
+        paymentBreakdown.upi += amount;
+      } else if (payment.method === PaymentMethod.CARD) {
+        paymentBreakdown.card += amount;
+      }
+
+      return sum + amount;
+    }, 0);
+
+    const outstandingAmount = Math.max(orderTotal - paidAmount, 0);
+
+    if (outstandingAmount > 0) {
+      dueOrderCount += 1;
+      liabilityAmount += outstandingAmount;
+    }
+
+    const hour = new Date(order.createdAt).getHours();
+    hourlyOrderCountMap[hour] = (hourlyOrderCountMap[hour] || 0) + 1;
   });
 
-  let peakHour = null;
-  if (ordersByHour.size > 0) {
-    let bestHour = null;
-    let bestCount = -1;
-    ordersByHour.forEach((count, hour) => {
-      if (count > bestCount) {
-        bestCount = count;
-        bestHour = hour;
-      }
-    });
-    peakHour = { hour: bestHour, orders: bestCount };
-  }
-
-  const sumPayments = (method) =>
-    toNumber(
-      payments
-        .filter((p) => p.method === method)
-        .reduce((acc, p) => acc.plus(p.amount), new Prisma.Decimal(0)),
-    );
-
-  const cashCollected = sumPayments(PaymentMethod.CASH);
-  const upiCollected = sumPayments(PaymentMethod.UPI);
-  const cardCollected = sumPayments(PaymentMethod.CARD);
-  const totalCollected = cashCollected + upiCollected + cardCollected;
+  const peakHours = Object.entries(hourlyOrderCountMap)
+    .map(([hour, orderCount]) => ({
+      hour: `${String(hour).padStart(2, "0")}:00`,
+      orderCount,
+    }))
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 3);
 
   const cashExpenses = toNumber(cashExpensesAgg._sum.amount);
   const openingCash = toNumber(session.openingCash);
-  const expectedCashInDrawer = openingCash + cashCollected - cashExpenses;
+  const expectedCashInDrawer =
+    openingCash + paymentBreakdown.cash - cashExpenses;
 
   return {
     preset: "current",
@@ -581,29 +628,34 @@ const getCurrentSessionOverview = async ({ shopId }) => {
       openedBy: session.openedBy
         ? { id: session.openedBy.id, name: session.openedBy.name }
         : null,
-      openingCash,
+      openingCash: roundToTwo(openingCash),
     },
-    summary: {
-      totalOrders,
-      completedOrders,
-      cancelledOrders,
-      dueOrders,
-      outstandingLiability,
-      totalRevenue,
-      averageOrderValue,
-      peakHour,
-      collections: {
-        totalCollected,
-        cashCollected,
-        upiCollected,
-        cardCollected,
+    orders: {
+      totalOrderCount,
+      completedOrdersCount,
+      cancelledOrderCount,
+      dueOrderCount,
+      totalRevenueAmount: roundToTwo(totalRevenueAmount),
+      avgOrderValue: roundToTwo(avgOrderValue),
+      peakHours,
+    },
+    payments: {
+      totalCollectedPayments: roundToTwo(totalCollectedPayments),
+      paymentBreakdown: {
+        cash: roundToTwo(paymentBreakdown.cash),
+        upi: roundToTwo(paymentBreakdown.upi),
+        card: roundToTwo(paymentBreakdown.card),
       },
-      cashDrawer: {
-        openingCash,
-        cashCollected,
-        cashExpenses,
-        expectedCashInDrawer,
+      liability: {
+        unpaidOrderCount: dueOrderCount,
+        unpaidAmount: roundToTwo(liabilityAmount),
       },
+    },
+    cashDrawer: {
+      openingCash: roundToTwo(openingCash),
+      cashCollected: roundToTwo(paymentBreakdown.cash),
+      cashExpenses: roundToTwo(cashExpenses),
+      expectedCashInDrawer: roundToTwo(expectedCashInDrawer),
     },
   };
 };
