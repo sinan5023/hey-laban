@@ -232,6 +232,12 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
         status: true,
         totalAmount: true,
         createdAt: true,
+        orderItems: {
+          select: {
+            name: true,
+            quantity: true,
+          },
+        },
         payments: {
           where: { status: 'COMPLETED' },
           select: { method: true, amount: true },
@@ -260,9 +266,20 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
   let dueOrderCount = 0
 
   const hourlyOrderCountMap = {}
+  const itemSalesMap = {}
 
   nonCancelledOrders.forEach((order) => {
     const orderTotal = toNumber(order.totalAmount)
+
+    if (order.orderItems) {
+      order.orderItems.forEach((item) => {
+        const qty = toNumber(item.quantity)
+        if (!itemSalesMap[item.name]) {
+          itemSalesMap[item.name] = 0
+        }
+        itemSalesMap[item.name] += qty
+      })
+    }
 
     const paidAmount = order.payments.reduce((sum, payment) => {
       const amount = toNumber(payment.amount)
@@ -299,6 +316,11 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 3)
 
+  const topSellingProducts = Object.entries(itemSalesMap)
+    .map(([name, quantity]) => ({ name, quantity }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 4)
+
   return {
     orders: {
       totalOrderCount,
@@ -308,6 +330,7 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
       totalRevenueAmount: roundToTwo(totalRevenueAmount),
       avgOrderValue: roundToTwo(avgOrderValue),
       peakHours,
+      topSellingProducts,
     },
     payments: {
       totalCollectedPayments: roundToTwo(totalCollectedPayments),
@@ -339,6 +362,12 @@ const getBusinessReport = async ({ shopId, sessionId, startDate, endDate }) => {
           status: true,
           totalAmount: true,
           createdAt: true,
+          orderItems: {
+            select: {
+              name: true,
+              quantity: true,
+            },
+          },
           payments: {
             where: { status: 'COMPLETED' },
             select: { method: true, amount: true },
@@ -381,9 +410,20 @@ const getBusinessReport = async ({ shopId, sessionId, startDate, endDate }) => {
   let dueOrderCount = 0
 
   const hourlyOrderCountMap = {}
+  const itemSalesMap = {}
 
   nonCancelledOrders.forEach((order) => {
     const orderTotal = toNumber(order.totalAmount)
+
+    if (order.orderItems) {
+      order.orderItems.forEach((item) => {
+        const qty = toNumber(item.quantity)
+        if (!itemSalesMap[item.name]) {
+          itemSalesMap[item.name] = 0
+        }
+        itemSalesMap[item.name] += qty
+      })
+    }
 
     const paidAmount = order.payments.reduce((sum, payment) => {
       const amount = toNumber(payment.amount)
@@ -420,8 +460,13 @@ const getBusinessReport = async ({ shopId, sessionId, startDate, endDate }) => {
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 3)
 
+  const topSellingProducts = Object.entries(itemSalesMap)
+    .map(([name, quantity]) => ({ name, quantity }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 4)
+
   const cashExpensesAmount = expenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0)
-  const expectedCashInDrawer = openingCash + paymentBreakdown.cash - cashExpensesAmount
+  const expectedCashInDrawer = openingCash + paymentBreakdown.cash
 
   // Process expenses for P&L
   let cogs = 0
@@ -466,6 +511,7 @@ const getBusinessReport = async ({ shopId, sessionId, startDate, endDate }) => {
       totalRevenueAmount: roundToTwo(totalRevenueAmount),
       avgOrderValue: roundToTwo(avgOrderValue),
       peakHours,
+      topSellingProducts,
     },
     payments: {
       totalCollectedPayments: roundToTwo(totalCollectedPayments),
