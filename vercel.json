@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "regions": ["sin1"],
+  "regions": ["bom1"],
   "builds": [
     {
       "src": "app.js",
