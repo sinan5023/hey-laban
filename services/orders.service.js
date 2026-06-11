@@ -524,62 +524,63 @@ const createOrderWithKot = async ({
   return await prisma.$transaction(async (tx) => {
     const { id: sessionId, date } = session;
 
-    // ── 1. Bump counters for order, token, AND KOT in one query ──
-    const counter = await tx.dailyCounter.upsert({
-      where: {
-        shopId_date: {
+    // ── 1. Fetch products and bump counters concurrently ──
+    const productIds = items.map((item) => item.productId);
+
+    const [counter, products] = await Promise.all([
+      tx.dailyCounter.upsert({
+        where: {
+          shopId_date: {
+            shopId,
+            date,
+          },
+        },
+        update: {
+          lastToken: { increment: 1 },
+          lastOrder: { increment: 1 },
+          lastKot: { increment: 1 },
+        },
+        create: {
           shopId,
           date,
+          lastToken: 1,
+          lastOrder: 1,
+          lastKot: 1,
         },
-      },
-      update: {
-        lastToken: { increment: 1 },
-        lastOrder: { increment: 1 },
-        lastKot: { increment: 1 },
-      },
-      create: {
-        shopId,
-        date,
-        lastToken: 1,
-        lastOrder: 1,
-        lastKot: 1,
-      },
-      select: {
-        lastToken: true,
-        lastOrder: true,
-        lastKot: true,
-      },
-    });
+        select: {
+          lastToken: true,
+          lastOrder: true,
+          lastKot: true,
+        },
+      }),
+      tx.product.findMany({
+        where: {
+          id: { in: productIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+        },
+      })
+    ]);
 
     const tokenNo = counter.lastToken;
     const orderNo = `ORD-${String(counter.lastOrder)}`;
     const kotNo = `KOT-${String(counter.lastKot).padStart(4, "0")}`;
 
-    // ── 2. Resolve product prices ──
-    const productIds = items.map((item) => item.productId);
-
-    const products = await tx.product.findMany({
-      where: {
-        id: { in: productIds },
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-      },
-    });
-
+    // ── 2. Validate product prices ──
     if (products.length !== productIds.length) {
       const foundIds = new Set(products.map((p) => p.id));
       const missingIds = productIds.filter((id) => !foundIds.has(id));
       throw new ApiError(
         400,
-        `Invalid or inactive product IDs: ${missingIds.join(", ")}`,
+        `Invalid or inactive product IDs: ${missingIds.join(", ")}`
       );
     }
 
-    // ── 3. Build order items ──
+    // ── 3. Build order items and calculate totals ──
     let subtotal = 0;
 
     const orderItems = items.map((item) => {
@@ -599,7 +600,33 @@ const createOrderWithKot = async ({
 
     const totalAmount = Math.max(0, subtotal - Number(discountAmount));
 
-    // ── 4. Create the order ──
+    // ── 4. Pre-calculate payment status ──
+    let totalPaid = 0;
+    let paymentData = [];
+
+    if (payments && Array.isArray(payments) && payments.length > 0) {
+      totalPaid = payments
+        .filter((p) => (p.status || "COMPLETED") === "COMPLETED")
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      paymentData = payments.map((p) => ({
+        shopId,
+        sessionId,
+        method: p.method,
+        amount: p.amount,
+        referenceNo: p.referenceNo || null,
+        cashTendered: p.cashTendered || null,
+        changeAmount: p.changeAmount || null,
+        status: p.status || "COMPLETED",
+        createdById: createdById || null,
+      }));
+    }
+
+    const isFullyPaid = totalPaid >= totalAmount;
+    const finalOrderStatus = isFullyPaid ? "COMPLETED" : "OPEN";
+    const completedAt = isFullyPaid ? new Date() : null;
+
+    // ── 5. Create Order, KOT, and Payments in one nested write ──
     const order = await tx.order.create({
       data: {
         shopId,
@@ -607,7 +634,7 @@ const createOrderWithKot = async ({
         orderNo,
         tokenNo,
         orderType,
-        status: "OPEN",
+        status: finalOrderStatus,
         kotStatus: "PRINTED",
         subtotal,
         discountAmount,
@@ -615,91 +642,65 @@ const createOrderWithKot = async ({
         note: note || null,
         localId: localId || null,
         syncedAt: localId ? new Date() : null,
+        completedAt,
         orderItems: {
           create: orderItems,
         },
+        kot: {
+          create: {
+            shopId,
+            sessionId,
+            kotNo,
+            status: "PRINTED",
+            timesPrinted: 1,
+            note: kotNote ?? null,
+            createdById: createdById ?? null,
+            kotItems: {
+              create: orderItems.map((item) => ({
+                productId: item.productId ?? null,
+                name: item.name,
+                quantity: item.quantity,
+                note: item.note ?? null,
+              })),
+            },
+          },
+        },
+        ...(paymentData.length > 0 && {
+          payments: {
+            create: paymentData,
+          },
+        }),
       },
       include: {
         orderItems: true,
-      },
-    });
-
-    // ── 5. Create the KOT ──
-    const kot = await tx.kot.create({
-      data: {
-        shopId,
-        sessionId,
-        orderId: order.id,
-        kotNo,
-        status: "PRINTED",
-        timesPrinted: 1,
-        note: kotNote ?? null,
-        createdById: createdById ?? null,
-        kotItems: {
-          create: order.orderItems.map((item) => ({
-            productId: item.productId ?? null,
-            name: item.name,
-            quantity: item.quantity,
-            note: item.note ?? null,
-          })),
+        kot: {
+          include: {
+            kotItems: true,
+          },
         },
-      },
-      include: {
-        kotItems: true,
+        payments: true,
       },
     });
 
-    // ── 6. Create Payments (if provided for offline sync) ──
-    let createdPayments = [];
-    if (payments && Array.isArray(payments) && payments.length > 0) {
-      await tx.payment.createMany({
-        data: payments.map((p) => ({
-          shopId,
-          sessionId,
-          orderId: order.id,
-          method: p.method,
-          amount: p.amount,
-          referenceNo: p.referenceNo || null,
-          cashTendered: p.cashTendered || null,
-          changeAmount: p.changeAmount || null,
-          status: p.status || "COMPLETED",
-          createdById: createdById || null,
-        })),
-      });
-
-      // Update order status if fully paid
-      const totalPaid = payments
-        .filter((p) => p.status === "COMPLETED")
-        .reduce((sum, p) => sum + Number(p.amount), 0);
-
-      if (totalPaid >= totalAmount) {
-        await tx.order.update({
-          where: { id: order.id },
-          data: { status: "COMPLETED", completedAt: new Date() },
-        });
-        order.status = "COMPLETED";
-      }
-      
-      createdPayments = await tx.payment.findMany({
-        where: { orderId: order.id }
-      });
-    }
-
-    // ── 7. Return both in one response ──
+    // ── 6. Return response ──
     return {
-      order,
+      order: {
+        ...order,
+        kot: undefined,
+        payments: undefined,
+      },
       kot: {
-        id: kot.id,
-        sessionId: kot.sessionId,
-        orderId: kot.orderId,
+        id: order.kot.id,
+        sessionId: order.kot.sessionId,
+        orderId: order.kot.orderId,
         orderNo: order.orderNo,
         tokenNo: order.tokenNo,
-        kotNo: kot.kotNo,
-        status: kot.status,
-        timesPrinted: kot.timesPrinted,
-        note: kot.note,
-        printedAt: kot.printedAt,
-        kotItems: kot.kotItems.map((item) => ({
+        kotNo: order.kot.kotNo,
+        status: order.kot.status,
+        timesPrinted: order.kot.timesPrinted,
+        note: order.kot.note,
+        printedAt: order.kot.printedAt,
+        kotItems: order.kot.kotItems.map((item) => ({
           id: item.id,
           kotId: item.kotId,
           productId: item.productId,
@@ -708,7 +709,7 @@ const createOrderWithKot = async ({
           note: item.note,
         })),
       },
-      payments: createdPayments,
+      payments: order.payments || [],
     };
   });
 };
