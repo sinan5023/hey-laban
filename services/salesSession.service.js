@@ -217,20 +217,20 @@ const closeTodaySalesSession = async ({
     }
 
     // TODO (enable later): block closing if there are unsettled orders
-    // const unsettled = await tx.order.count({
-    //   where: {
-    //     shopId,
-    //     sessionId: session.id,
-    //     status: { in: ["OPEN", "DUE"] },
-    //   },
-    // });
+    const unsettled = await tx.order.count({
+      where: {
+        shopId,
+        sessionId: session.id,
+        status: { in: ["OPEN", "DUE"] },
+      },
+    });
     
-    // if (unsettled > 0) {
-    //   throw new ApiError(
-    //     400,
-    //     `${unsettled} orders are unsettled. Settle all orders before closing the session.`,
-    //   );
-    // }
+    if (unsettled > 0) {
+      throw new ApiError(
+        400,
+        `${unsettled} orders are unsettled. Settle all orders before closing the session.`,
+      );
+    }
 
     // Use business close date for expenseDate; this still respects your cutoff
     const businessDateForClose = getCloseBusinessDate(now);
