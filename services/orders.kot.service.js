@@ -272,33 +272,34 @@ const listKots = async ({
       break
   }
 
-  const kots = await prisma.kot.findMany({
-    where: whereClause,
-    orderBy: orderByClause,
-    skip: offset,
-    take: limitNum,
-    select: {
-      id: true,
-      kotNo: true,
-      status: true,
-      timesPrinted: true,
-      note: true,
-      printedAt: true,
-      order: {
-        select: {
-          id: true,
-          orderNo: true,
-          tokenNo: true,
-          status: true,
-          kotStatus: true,
+  const [kots, total] = await Promise.all([
+    prisma.kot.findMany({
+      where: whereClause,
+      orderBy: orderByClause,
+      skip: offset,
+      take: limitNum,
+      select: {
+        id: true,
+        kotNo: true,
+        status: true,
+        timesPrinted: true,
+        note: true,
+        printedAt: true,
+        order: {
+          select: {
+            id: true,
+            orderNo: true,
+            tokenNo: true,
+            status: true,
+            kotStatus: true,
+          },
         },
       },
-    },
-  })
-
-  const total = await prisma.kot.count({
-    where: whereClause,
-  })
+    }),
+    prisma.kot.count({
+      where: whereClause,
+    })
+  ])
 
   return {
     data: kots,
