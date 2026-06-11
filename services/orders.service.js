@@ -241,9 +241,6 @@ const getOrderById = async ({ shopId, sessionId, orderId }) => {
         },
       },
       kot: {
-        where: {
-          sessionId,
-        },
         select: {
           id: true,
           kotNo: true,
@@ -261,9 +258,6 @@ const getOrderById = async ({ shopId, sessionId, orderId }) => {
         },
       },
       payments: {
-        where: {
-          sessionId,
-        },
         select: {
           id: true,
           method: true,
