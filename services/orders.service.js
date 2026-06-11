@@ -152,48 +152,49 @@ const listOrders = async ({
       break
   }
 
-  const orders = await prisma.order.findMany({
-    where: whereClause,
-    orderBy: orderByClause,
-    skip: offset,
-    take: limitNum,
-    select: {
-      id: true,
-      orderNo: true,
-      tokenNo: true,
-      status: true,
-      kotStatus: true,
-      subtotal: true,
-      discountAmount: true,
-      totalAmount: true,
-      note: true,
-      createdAt: true,
-      completedAt: true,
-      cancelledAt: true,
-      payments: {
-        select: {
-          method: true,
-          amount: true,
-          cashTendered: true,
-          changeAmount: true,
-          status: true,
-          createdAt: true,
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where: whereClause,
+      orderBy: orderByClause,
+      skip: offset,
+      take: limitNum,
+      select: {
+        id: true,
+        orderNo: true,
+        tokenNo: true,
+        status: true,
+        kotStatus: true,
+        subtotal: true,
+        discountAmount: true,
+        totalAmount: true,
+        note: true,
+        createdAt: true,
+        completedAt: true,
+        cancelledAt: true,
+        payments: {
+          select: {
+            method: true,
+            amount: true,
+            cashTendered: true,
+            changeAmount: true,
+            status: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },  
         },
-        orderBy: {
-          createdAt: "desc",
-        },  
-      },
-      kot:{
-        select:{
-          id:true,
-          kotNo:true,
-          timesPrinted:true,
+        kot:{
+          select:{
+            id:true,
+            kotNo:true,
+            timesPrinted:true,
+          }
         }
-      }
-    },
-  })
-
-  const total = await prisma.order.count({ where: whereClause })
+      },
+    }),
+    prisma.order.count({ where: whereClause })
+  ])
 
   return {
     data: orders,
@@ -517,6 +518,8 @@ const createOrderWithKot = async ({
   discountAmount = 0,
   kotNote,
   createdById,
+  localId,
+  payments,
 }) => {
   return await prisma.$transaction(async (tx) => {
     const { id: sessionId, date } = session;
@@ -610,6 +613,8 @@ const createOrderWithKot = async ({
         discountAmount,
         totalAmount,
         note: note || null,
+        localId: localId || null,
+        syncedAt: localId ? new Date() : null,
         orderItems: {
           create: orderItems,
         },
@@ -644,7 +649,43 @@ const createOrderWithKot = async ({
       },
     });
 
-    // ── 6. Return both in one response ──
+    // ── 6. Create Payments (if provided for offline sync) ──
+    let createdPayments = [];
+    if (payments && Array.isArray(payments) && payments.length > 0) {
+      await tx.payment.createMany({
+        data: payments.map((p) => ({
+          shopId,
+          sessionId,
+          orderId: order.id,
+          method: p.method,
+          amount: p.amount,
+          referenceNo: p.referenceNo || null,
+          cashTendered: p.cashTendered || null,
+          changeAmount: p.changeAmount || null,
+          status: p.status || "COMPLETED",
+          createdById: createdById || null,
+        })),
+      });
+
+      // Update order status if fully paid
+      const totalPaid = payments
+        .filter((p) => p.status === "COMPLETED")
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+
+      if (totalPaid >= totalAmount) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: "COMPLETED", completedAt: new Date() },
+        });
+        order.status = "COMPLETED";
+      }
+      
+      createdPayments = await tx.payment.findMany({
+        where: { orderId: order.id }
+      });
+    }
+
+    // ── 7. Return both in one response ──
     return {
       order,
       kot: {
@@ -667,6 +708,7 @@ const createOrderWithKot = async ({
           note: item.note,
         })),
       },
+      payments: createdPayments,
     };
   });
 };

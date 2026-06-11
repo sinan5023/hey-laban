@@ -25,7 +25,7 @@ try {
   app.use(express.urlencoded({ extended: true }));
   app.enable('trust proxy')
   const devOrigins = process.env.NODE_ENV !== "production" 
-    ? ["http://localhost:3000", "https://2l3t23t3-3000.inc1.devtunnels.ms"] 
+    ? ["http://localhost:3000", "",] 
     : [];
 
   app.use(

@@ -129,7 +129,7 @@ const cancelOrder = async (req, res, next) => {
 const createOrderWithKot = async (req, res, next) => {
   try {
     const shopId = req.user.shopId;
-    const { note, discountAmount = 0, items, orderType, kotNote } = req.body;
+    const { note, discountAmount = 0, items, orderType, kotNote, localId, payments } = req.body;
 
     const result = await orderService.createOrderWithKot({
       shopId,
@@ -140,6 +140,8 @@ const createOrderWithKot = async (req, res, next) => {
       discountAmount,
       kotNote: kotNote || null,
       createdById: req.user.id,
+      localId: localId || null,
+      payments: payments || [],
     });
 
     return sendSuccess(res, {

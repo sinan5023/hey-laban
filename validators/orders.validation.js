@@ -12,6 +12,17 @@ const createOrderSchema = Joi.object({
     discountAmount: Joi.number().min(0).optional().default(0),
     items: Joi.array().items(orderItemSchema).min(1).required(),
     kotNote: Joi.string().allow(null, "").optional(),
+    localId: Joi.string().uuid().optional(),
+    payments: Joi.array().items(
+      Joi.object({
+        method: Joi.string().required(),
+        amount: Joi.number().required(),
+        referenceNo: Joi.string().allow(null, "").optional(),
+        cashTendered: Joi.number().optional(),
+        changeAmount: Joi.number().optional(),
+        status: Joi.string().optional()
+      })
+    ).optional(),
   }).required(),
 });
 
