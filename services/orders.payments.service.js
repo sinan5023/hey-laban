@@ -118,40 +118,6 @@ const addPaymentsToOrder = async ({
       )
     }
 
-    const createdPayments = []
-
-    for (const payment of normalizedPayments) {
-      const createdPayment = await tx.payment.create({
-        data: {
-          shopId,
-          sessionId: session.id,
-          orderId: order.id,
-          method: payment.method,
-          amount: payment.amount,
-          referenceNo: payment.referenceNo,
-          cashTendered: payment.cashTendered,
-          changeAmount: payment.changeAmount,
-          status: "COMPLETED",
-          createdById: createdById ?? null,
-        },
-        select: {
-          id: true,
-          shopId: true,
-          sessionId: true,
-          orderId: true,
-          method: true,
-          amount: true,
-          referenceNo: true,
-          cashTendered: true,
-          changeAmount: true,
-          status: true,
-          createdAt: true,
-        },
-      })
-
-      createdPayments.push(createdPayment)
-    }
-
     const totalPaidAfter = totalPaidBefore + requestTotal
     const balanceDueAfter = Math.max(0, totalAmount - totalPaidAfter)
 
@@ -163,22 +129,53 @@ const addPaymentsToOrder = async ({
       completedAt = new Date()
     }
 
-    const updatedOrder = await tx.order.update({
-      where: {
-        id: order.id,
-      },
-      data: {
-        status: nextOrderStatus,
-        completedAt,
-      },
-      select: {
-        id: true,
-        orderNo: true,
-        tokenNo: true,
-        status: true,
-        totalAmount: true,
-      },
-    })
+    const [updatedOrder, ...createdPayments] = await Promise.all([
+      tx.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          status: nextOrderStatus,
+          completedAt,
+        },
+        select: {
+          id: true,
+          orderNo: true,
+          tokenNo: true,
+          status: true,
+          totalAmount: true,
+        },
+      }),
+      ...normalizedPayments.map((payment) =>
+        tx.payment.create({
+          data: {
+            shopId,
+            sessionId: session.id,
+            orderId: order.id,
+            method: payment.method,
+            amount: payment.amount,
+            referenceNo: payment.referenceNo,
+            cashTendered: payment.cashTendered,
+            changeAmount: payment.changeAmount,
+            status: "COMPLETED",
+            createdById: createdById ?? null,
+          },
+          select: {
+            id: true,
+            shopId: true,
+            sessionId: true,
+            orderId: true,
+            method: true,
+            amount: true,
+            referenceNo: true,
+            cashTendered: true,
+            changeAmount: true,
+            status: true,
+            createdAt: true,
+          },
+        })
+      ),
+    ]);
 
     return {
       orderId: updatedOrder.id,
