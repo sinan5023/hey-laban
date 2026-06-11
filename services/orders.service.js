@@ -13,47 +13,48 @@ const createOrder = async ({
   return await prisma.$transaction(async (tx) => {
     const { id: sessionId, date } = session;
 
-    const counter = await tx.dailyCounter.upsert({
-      where: {
-        shopId_date: {
+    const productIds = items.map((item) => item.productId);
+
+    const [counter, products] = await Promise.all([
+      tx.dailyCounter.upsert({
+        where: {
+          shopId_date: {
+            shopId,
+            date,
+          },
+        },
+        update: {
+          lastToken: { increment: 1 },
+          lastOrder: { increment: 1 },
+        },
+        create: {
           shopId,
           date,
+          lastToken: 1,
+          lastOrder: 1,
+          lastKot: 0,
         },
-      },
-      update: {
-        lastToken: { increment: 1 },
-        lastOrder: { increment: 1 },
-      },
-      create: {
-        shopId,
-        date,
-        lastToken: 1,
-        lastOrder: 1,
-        lastKot: 0,
-      },
-      select: {
-        lastToken: true,
-        lastOrder: true,
-      },
-    });
+        select: {
+          lastToken: true,
+          lastOrder: true,
+        },
+      }),
+      tx.product.findMany({
+        where: {
+          id: { in: productIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+        },
+      })
+    ]);
 
     const tokenNo = counter.lastToken;
     const nextOrderNum = counter.lastOrder;
     const orderNo = `ORD-${String(nextOrderNum)}`;
-
-    const productIds = items.map((item) => item.productId);
-
-    const products = await tx.product.findMany({
-      where: {
-        id: { in: productIds },
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-      },
-    });
 
     if (products.length !== productIds.length) {
       const foundIds = new Set(products.map((p) => p.id));
@@ -429,6 +430,7 @@ const cancelOrderById = async ({ orderId, reason, shopId, sessionId, cancelledBy
       status: true,
       sessionId: true,
       kotStatus: true,
+      kot: { select: { id: true } }
     },
   })
 
@@ -440,64 +442,56 @@ const cancelOrderById = async ({ orderId, reason, shopId, sessionId, cancelledBy
     throw new ApiError(400, 'Order is already cancelled')
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const updatedOrder = await tx.order.update({
-      where: {
-        id: orderId,
-      },
-      data: {
-        status: 'CANCELLED',
-        kotStatus: 'CANCELLED',
-        cancelledAt: new Date(),
-        cancelReason: reason,
-      },
-      select: {
-        id: true,
-        orderNo: true,
-        status: true,
-        kotStatus: true,
-        sessionId: true,
-        cancelReason: true,
-        cancelledAt: true,
-        updatedAt: true,
-      },
-    })
-
-    await tx.kot.updateMany({
-      where: {
-        orderId,
-        shopId,
-        sessionId,
-        status: {
-          not: 'CANCELLED',
+  const updatedData = await prisma.order.update({
+    where: {
+      id: orderId,
+    },
+    data: {
+      status: 'CANCELLED',
+      kotStatus: 'CANCELLED',
+      cancelledAt: new Date(),
+      cancelReason: reason,
+      ...(order.kot && {
+        kot: {
+          update: {
+            status: 'CANCELLED',
+          },
+        },
+      }),
+    },
+    select: {
+      id: true,
+      orderNo: true,
+      status: true,
+      kotStatus: true,
+      sessionId: true,
+      cancelReason: true,
+      cancelledAt: true,
+      updatedAt: true,
+      kot: {
+        select: {
+          id: true,
+          kotNo: true,
+          status: true,
+          printedAt: true,
         },
       },
-      data: {
-        status: 'CANCELLED',
-      },
-    })
-
-    const cancelledKot = await tx.kot.findFirst({
-      where: {
-        orderId,
-        shopId,
-        sessionId,
-      },
-      select: {
-        id: true,
-        kotNo: true,
-        status: true,
-        printedAt: true,
-      },
-    })
-
-    return {
-      order: updatedOrder,
-      kot: cancelledKot,
-    }
+    },
   })
 
-  return result
+  return {
+    order: {
+      id: updatedData.id,
+      orderNo: updatedData.orderNo,
+      status: updatedData.status,
+      kotStatus: updatedData.kotStatus,
+      sessionId: updatedData.sessionId,
+      cancelReason: updatedData.cancelReason,
+      cancelledAt: updatedData.cancelledAt,
+      updatedAt: updatedData.updatedAt,
+    },
+    kot: updatedData.kot || null,
+  }
 }
 /**
  * Creates an order AND a KOT in a single transaction.
