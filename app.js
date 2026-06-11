@@ -24,9 +24,13 @@ try {
   app.use(cookieParser());
   app.use(express.urlencoded({ extended: true }));
   app.enable('trust proxy')
+  const devOrigins = process.env.NODE_ENV !== "production" 
+    ? ["http://localhost:3000", "https://2l3t23t3-3000.inc1.devtunnels.ms"] 
+    : [];
+
   app.use(
     cors({
-      origin: ["http://localhost:3000","https://2l3t23t3-3000.inc1.devtunnels.ms"],
+      origin: [...devOrigins, process.env.FRONTEND_URL].filter(Boolean),
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: [
