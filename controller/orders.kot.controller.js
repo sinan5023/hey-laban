@@ -1,7 +1,7 @@
 // controllers/kots.controller.js
 const { sendSuccess, sendError } = require('../helpers/response')
 const kotService = require('../services/orders.kot.service')
-const ApiError = require('../helpers/apiError')
+const ApiError = require('../helpers/ApiError')
 
 const createKotHandler = async (req, res , next) => {
   try {
