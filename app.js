@@ -4,13 +4,13 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 // Routes
-const authApi = require("./Routes/auth.api");
-const catalogueApi = require("./Routes/items.api");
-const salesSessionApi = require("./Routes/salesSession.api")
-const ordersApi = require("./Routes/orders.api")
-const searchApi = require("./Routes/search.api")
-const profileApi = require("./Routes/profile.api")
-const reportsApi = require("./Routes/reports.api")
+const authApi = require("./routes/auth.api");
+const catalogueApi = require("./routes/items.api");
+const salesSessionApi = require("./routes/salesSession.api")
+const ordersApi = require("./routes/orders.api")
+const searchApi = require("./routes/search.api")
+const profileApi = require("./routes/profile.api")
+const reportsApi = require("./routes/reports.api")
 // Global error handlong middleware
 const errorHandler = require("./middlewares/globalErrorHandler.middleware")
 
