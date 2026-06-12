@@ -1,5 +1,5 @@
 // services/profile/changePassword.service.js
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs')
 const prisma = require('../lib/prisma')
 const ApiError = require('../helpers/ApiError')
 
