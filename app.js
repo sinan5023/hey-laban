@@ -50,10 +50,4 @@ app.use(errorHandler)
 
 
 
-
-
-
-
-app.listen(8000, () => {
-  console.log("The Server Is Up And Running");
-});
+module.exports = app
