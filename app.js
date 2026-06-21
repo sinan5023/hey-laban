@@ -14,6 +14,7 @@ try {
   const searchApi = require("./routes/search.api")
   const profileApi = require("./routes/profile.api")
   const reportsApi = require("./routes/reports.api")
+  const inventoryApi = require("./routes/inventory.api")
   // Global error handlong middleware
   const errorHandler = require("./middlewares/globalErrorHandler.middleware")
 
@@ -50,6 +51,7 @@ try {
   app.use("/api/search",searchApi)
   app.use("/api/profile",profileApi)
   app.use("/api/reports",reportsApi)
+  app.use("/api/inventory",inventoryApi)
 
   //global error handler 
   app.use(errorHandler)

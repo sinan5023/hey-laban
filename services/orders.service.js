@@ -1,6 +1,7 @@
 const prisma = require("../lib/prisma");
 const getBusinessDate = require("../helpers/getBusinessDate");
 const ApiError = require("../helpers/ApiError");
+const { deductInventoryForOrder, restoreInventoryForOrder, swapInventoryForOrderEdit } = require("./inventory.service");
 
 const createOrder = async ({
   shopId,
@@ -107,6 +108,8 @@ const createOrder = async ({
         orderItems: true,
       },
     });
+
+    await deductInventoryForOrder(tx, orderItems, order.id, "ORDER_DEDUCTION");
 
     return order;
   });
@@ -335,23 +338,21 @@ const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
       throw new ApiError(400, "items array is required and must not be empty");
     }
 
-    const productIds = items.map((item) => item.productId);
+    // Fetch old items (for inventory restore) and validate new products in parallel
+    const [oldItems, products] = await Promise.all([
+      tx.orderItem.findMany({
+        where: { orderId: order.id },
+        select: { productId: true, quantity: true },
+      }),
+      tx.product.findMany({
+        where: { id: { in: items.map((i) => i.productId) }, isActive: true },
+        select: { id: true, name: true, price: true },
+      }),
+    ]);
 
-    const products = await tx.product.findMany({
-      where: {
-        id: { in: productIds },
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-      },
-    });
-
-    if (products.length !== productIds.length) {
+    if (products.length !== items.length) {
       const foundIds = new Set(products.map((p) => p.id));
-      const missingIds = productIds.filter((id) => !foundIds.has(id));
+      const missingIds = items.map((i) => i.productId).filter((id) => !foundIds.has(id));
       throw new ApiError(
         400,
         `Invalid or inactive product IDs: ${missingIds.join(", ")}`,
@@ -393,6 +394,9 @@ const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
       })),
     });
 
+    // Single round-trip: restore old inventory + deduct new inventory
+    await swapInventoryForOrderEdit(tx, oldItems, orderItems, order.id);
+
     return await tx.order.update({
       where: { id: order.id },
       data: {
@@ -418,81 +422,87 @@ const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
 };
 
 const cancelOrderById = async ({ orderId, reason, shopId, sessionId, cancelledBy }) => {
-  const order = await prisma.order.findFirst({
-    where: {
-      id: orderId,
-      shopId,
-      sessionId,
-    },
-    select: {
-      id: true,
-      orderNo: true,
-      status: true,
-      sessionId: true,
-      kotStatus: true,
-      kot: { select: { id: true } }
-    },
-  })
+  return await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findFirst({
+      where: {
+        id: orderId,
+        shopId,
+        sessionId,
+      },
+      select: {
+        id: true,
+        orderNo: true,
+        status: true,
+        sessionId: true,
+        kotStatus: true,
+        kot: { select: { id: true } },
+        orderItems: { select: { productId: true, quantity: true } },
+      },
+    });
 
-  if (!order) {
-    throw new ApiError(404, 'Order not found for the current session')
-  }
+    if (!order) {
+      throw new ApiError(404, "Order not found for the current session");
+    }
 
-  if (order.status === 'CANCELLED') {
-    throw new ApiError(400, 'Order is already cancelled')
-  }
+    if (order.status === "CANCELLED") {
+      throw new ApiError(400, "Order is already cancelled");
+    }
 
-  const updatedData = await prisma.order.update({
-    where: {
-      id: orderId,
-    },
-    data: {
-      status: 'CANCELLED',
-      kotStatus: 'CANCELLED',
-      cancelledAt: new Date(),
-      cancelReason: reason,
-      ...(order.kot && {
+    const updatedData = await tx.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        status: "CANCELLED",
+        kotStatus: "CANCELLED",
+        cancelledAt: new Date(),
+        cancelReason: reason,
+        ...(order.kot && {
+          kot: {
+            update: {
+              status: "CANCELLED",
+            },
+          },
+        }),
+      },
+      select: {
+        id: true,
+        orderNo: true,
+        status: true,
+        kotStatus: true,
+        sessionId: true,
+        cancelReason: true,
+        cancelledAt: true,
+        updatedAt: true,
         kot: {
-          update: {
-            status: 'CANCELLED',
+          select: {
+            id: true,
+            kotNo: true,
+            status: true,
+            printedAt: true,
           },
         },
-      }),
-    },
-    select: {
-      id: true,
-      orderNo: true,
-      status: true,
-      kotStatus: true,
-      sessionId: true,
-      cancelReason: true,
-      cancelledAt: true,
-      updatedAt: true,
-      kot: {
-        select: {
-          id: true,
-          kotNo: true,
-          status: true,
-          printedAt: true,
-        },
       },
-    },
-  })
+    });
 
-  return {
-    order: {
-      id: updatedData.id,
-      orderNo: updatedData.orderNo,
-      status: updatedData.status,
-      kotStatus: updatedData.kotStatus,
-      sessionId: updatedData.sessionId,
-      cancelReason: updatedData.cancelReason,
-      cancelledAt: updatedData.cancelledAt,
-      updatedAt: updatedData.updatedAt,
-    },
-    kot: updatedData.kot || null,
-  }
-}
+    // Restore inventory for all items in the cancelled order
+    await restoreInventoryForOrder(tx, order.orderItems, orderId);
+
+    return {
+      order: {
+        id: updatedData.id,
+        orderNo: updatedData.orderNo,
+        status: updatedData.status,
+        kotStatus: updatedData.kotStatus,
+        sessionId: updatedData.sessionId,
+        cancelReason: updatedData.cancelReason,
+        cancelledAt: updatedData.cancelledAt,
+        updatedAt: updatedData.updatedAt,
+      },
+      kot: updatedData.kot || null,
+    };
+  });
+};
 /**
  * Creates an order AND a KOT in a single transaction.
  * Eliminates the second network round-trip from the frontend.
@@ -670,7 +680,10 @@ const createOrderWithKot = async ({
       },
     });
 
-    // ── 6. Return response ──
+    // ── 6. Deduct inventory for the order items ──
+    await deductInventoryForOrder(tx, orderItems, order.id, "ORDER_DEDUCTION");
+
+    // ── 7. Return response ──
     return {
       order: {
         ...order,
