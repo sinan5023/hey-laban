@@ -189,7 +189,7 @@ async function _applyInventoryChanges(tx, quantityMap, invRows, changeType, refe
     const quantityAfter  = quantityBefore + delta;
 
     if (quantityAfter < 0) {
-      throw new ApiError(400, `Insufficient stock for ${inv.product.name}. Available: ${quantityBefore}, Requested: ${Math.abs(delta)}`);
+      throw new ApiError(400, `Insufficient stock for product ${inv.productId}. Available: ${quantityBefore}, Requested: ${Math.abs(delta)}`);
     }
 
     updates.push(
@@ -230,7 +230,7 @@ const deductInventoryForOrder = async (tx, items, referenceId, changeType) => {
 
   const invRows = await tx.inventory.findMany({
     where: { productId: { in: [...quantityMap.keys()] } },
-    select: { id: true, productId: true, inHandCount: true, product: { select: { name: true } } },
+    select: { id: true, productId: true, inHandCount: true },
   });
 
   if (invRows.length === 0) return;
@@ -249,7 +249,7 @@ const restoreInventoryForOrder = async (tx, items, referenceId) => {
 
   const invRows = await tx.inventory.findMany({
     where: { productId: { in: [...quantityMap.keys()] } },
-    select: { id: true, productId: true, inHandCount: true, product: { select: { name: true } } },
+    select: { id: true, productId: true, inHandCount: true },
   });
 
   if (invRows.length === 0) return;
@@ -282,7 +282,7 @@ const swapInventoryForOrderEdit = async (tx, oldItems, newItems, orderId) => {
   // Single round-trip to fetch all relevant inventory rows
   const invRows = await tx.inventory.findMany({
     where: { productId: { in: [...allProductIds] } },
-    select: { id: true, productId: true, inHandCount: true, product: { select: { name: true } } },
+    select: { id: true, productId: true, inHandCount: true },
   });
 
   if (invRows.length === 0) return;
@@ -325,7 +325,7 @@ const swapInventoryForOrderEdit = async (tx, oldItems, newItems, orderId) => {
     const quantityAfter  = quantityBefore + delta;
 
     if (quantityAfter < 0) {
-      throw new ApiError(400, `Insufficient stock for ${inv.product.name}. Available: ${quantityBefore}`);
+      throw new ApiError(400, `Insufficient stock for product ${inv.productId}. Available: ${quantityBefore}`);
     }
 
     runningBalance.set(inv.productId, quantityAfter);
