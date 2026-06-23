@@ -18,6 +18,8 @@ const {
   updateItemSchema,
   deleteItemSchema,
   toggleItemInactiveSchema,
+  linkProductSchema,
+  unlinkProductSchema,
   createCategorySchema,
   updateCategorySchema,
   deleteCategorySchema,
@@ -33,6 +35,8 @@ router.post("/items", authMiddleware, validate(createItemSchema), itemsControlle
 router.patch("/items/:id", authMiddleware, validate(updateItemSchema), itemsController.updateItem);
 router.delete("/items/:id", authMiddleware, validate(deleteItemSchema), itemsController.deleteItem);
 router.patch("/items/:id/inactive", authMiddleware, validate(toggleItemInactiveSchema), itemsController.toggleItemInactive);
+router.put("/items/:id/ingredient", authMiddleware, validate(linkProductSchema), itemsController.linkIngredient);
+router.delete("/items/:id/ingredient", authMiddleware, validate(unlinkProductSchema), itemsController.unlinkIngredient);
 
 // ========== CATEGORIES ==========
 router.post("/categories", authMiddleware, validate(createCategorySchema), itemsController.createCategory);

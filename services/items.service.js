@@ -80,6 +80,11 @@ const getManagementCatalogue = async ({ shopId }) => {
           sortOrder: true,
           isActive: true,
           categoryId: true,
+          productIngredients: {
+            include: {
+              rawMaterial: { select: { id: true, name: true } },
+            },
+          },
         },
       },
     },
@@ -99,6 +104,7 @@ const getManagementCatalogue = async ({ shopId }) => {
         price: product.price.toNumber(),
         sortOrder: product.sortOrder,
         isActive: product.isActive,
+        rawMaterial: product.productIngredients?.[0]?.rawMaterial || null,
       })),
     })),
   };
@@ -210,10 +216,6 @@ const deleteProduct = async ({ id, shopId }) => {
   };
 };
 
-module.exports = {
-  deleteProduct,
-};
-
 const toggleProductInactive = async ({ id, shopId, isActive }) => {
   if (!id) {
     throw new ApiError(400, "Product ID is required");
@@ -237,6 +239,46 @@ const toggleProductInactive = async ({ id, shopId, isActive }) => {
   });
 
   return product;
+};
+
+const linkProductToRawMaterial = async ({ productId, rawMaterialId, shopId }) => {
+  // Verify product
+  const product = await prisma.product.findFirst({
+    where: { id: productId },
+  });
+  if (!product) throw new ApiError(404, "Product not found");
+
+  // Verify raw material belongs to shop
+  const rawMaterial = await prisma.rawMaterial.findFirst({
+    where: { id: rawMaterialId, shopId },
+  });
+  if (!rawMaterial) throw new ApiError(404, "Raw material not found");
+
+  // UPSERT the product ingredient (1 product = 1 base assumption)
+  const ingredient = await prisma.productIngredient.upsert({
+    where: { productId },
+    update: { rawMaterialId },
+    create: {
+      productId,
+      rawMaterialId,
+      quantity: 1, // Defaulting to 1 as per design
+    },
+  });
+
+  return ingredient;
+};
+
+const unlinkProductFromRawMaterial = async ({ productId, shopId }) => {
+  const product = await prisma.product.findFirst({
+    where: { id: productId },
+  });
+  if (!product) throw new ApiError(404, "Product not found");
+
+  await prisma.productIngredient.deleteMany({
+    where: { productId },
+  });
+
+  return { success: true };
 };
 
 // ========== CATEGORIES (new CRUD) ==========
@@ -329,9 +371,7 @@ const deleteCategory = async ({ id, shopId }) => {
   };
 };
 
-module.exports = {
-  deleteCategory,
-};
+
 
 const toggleCategoryInactive = async ({ id, shopId, isActive }) => {
   if (!id) {
@@ -365,6 +405,8 @@ module.exports = {
   updateProduct,
   deleteProduct,
   toggleProductInactive,
+  linkProductToRawMaterial,
+  unlinkProductFromRawMaterial,
   createCategory,
   updateCategory,
   deleteCategory,
