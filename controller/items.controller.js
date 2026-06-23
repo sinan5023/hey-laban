@@ -131,6 +131,48 @@ const toggleItemInactive = async (req, res, next) => {
   }
 };
 
+const linkIngredient = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rawMaterialId } = req.body;
+    const shopId = req.user.shopId;
+
+    const result = await itemsService.linkProductToRawMaterial({
+      productId: id,
+      rawMaterialId,
+      shopId,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: "Product linked to base ingredient successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const unlinkIngredient = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const shopId = req.user.shopId;
+
+    const result = await itemsService.unlinkProductFromRawMaterial({
+      productId: id,
+      shopId,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: "Product unlinked from base ingredient successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ========== CATEGORIES (new CRUD) ==========
 const createCategory = async (req, res, next) => {
   try {
@@ -225,6 +267,8 @@ module.exports = {
   updateItem,
   deleteItem,
   toggleItemInactive,
+  linkIngredient,
+  unlinkIngredient,
   createCategory,
   updateCategory,
   deleteCategory,

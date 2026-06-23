@@ -76,6 +76,30 @@ const toggleItemInactiveSchema = Joi.object({
   }).required(),
 });
 
+const linkProductSchema = Joi.object({
+  params: Joi.object({
+    id: Joi.string().uuid().required().messages({
+      "string.uuid": "Invalid product ID",
+      "any.required": "Product ID is required",
+    }),
+  }).required(),
+  body: Joi.object({
+    rawMaterialId: Joi.string().uuid().required().messages({
+      "string.uuid": "Invalid raw material ID",
+      "any.required": "Raw material ID is required",
+    }),
+  }).required(),
+});
+
+const unlinkProductSchema = Joi.object({
+  params: Joi.object({
+    id: Joi.string().uuid().required().messages({
+      "string.uuid": "Invalid product ID",
+      "any.required": "Product ID is required",
+    }),
+  }).required(),
+});
+
 // ========== CATEGORIES ==========
 const createCategorySchema = Joi.object({
   body: Joi.object({
@@ -137,6 +161,8 @@ module.exports = {
   updateItemSchema,
   deleteItemSchema,
   toggleItemInactiveSchema,
+  linkProductSchema,
+  unlinkProductSchema,
   createCategorySchema,
   updateCategorySchema,
   deleteCategorySchema,
