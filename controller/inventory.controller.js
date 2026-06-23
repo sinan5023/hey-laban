@@ -12,12 +12,14 @@ const setInventory = async (req, res, next) => {
     const { addQuantity, setQuantity, reorderLevel, note } = req.body;
 
     const result = await inventoryService.setInventory({
-      productId,
       shopId,
-      addQuantity,
-      setQuantity,
-      reorderLevel,
-      note: note || null,
+      updates: [{
+        productId,
+        addQuantity,
+        setQuantity,
+        reorderLevel,
+        note: note || null,
+      }],
       createdById: req.user.id,
     });
 
