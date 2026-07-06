@@ -75,6 +75,24 @@ const result = await prisma.$transaction(async (tx) => {
   return result
 }
 
+const getShopService = async ({ shopId }) => {
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
+    select: {
+      name: true,
+      address: true,
+      phone: true,
+    },
+  })
+
+  if (!shop) {
+    throw new ApiError(404, 'Shop not found')
+  }
+
+  return shop
+}
+
 module.exports = {
   changePasswordService,
+  getShopService,
 }

@@ -29,6 +29,27 @@ const changePasswordController = async (req, res, next) => {
   }
 }
 
+const getShopController = async (req, res, next) => {
+  try {
+    const shopId = req.user?.shopId
+
+    if (!shopId) {
+      throw new ApiError(401, 'Unauthorized')
+    }
+
+    const shop = await profileService.getShopService({ shopId })
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: 'Shop details fetched successfully',
+      data: shop,
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
 module.exports = {
   changePasswordController,
+  getShopController,
 }
