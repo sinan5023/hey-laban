@@ -12,5 +12,6 @@ const validate = require("../middlewares/validate.middleware");
 // API Validator
 const { changePasswordSchema } = require("../validators/changePass.profile");
 router.post("/password/change", authMiddleware, validate(changePasswordSchema),rateLimiter.changePasswordIpRateLimit,rateLimiter.changePasswordUserRateLimit,profileController.changePasswordController);
+router.get("/shop", authMiddleware, profileController.getShopController);
 
 module.exports = router;
