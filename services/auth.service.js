@@ -21,8 +21,10 @@ const sanitizeUser = (user) => ({
 });
 
 const login = async ({ email, password, userAgent, ipAddress }) => {
+  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : email;
+
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: normalizedEmail },
   });
 
   if (!user) {

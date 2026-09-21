@@ -7,8 +7,8 @@ async function main() {
   const shop = await prisma.shop.create({
     data: { 
       name: "Hey Leban", // Feel free to change this
-      address: "ECR , Vengapakkam",  // Feel free to change this
-      phone: "+91 9884797990", // Feel free to change this
+      address: "Blue Diamond Mall , Kozhikode ",  // Feel free to change this
+      phone: "+91 6381554322", // Feel free to change this
     }
   });
 
@@ -19,8 +19,8 @@ async function main() {
   const user = await prisma.user.create({
     data: {
       shopId: shop.id,
-      name: "Mani Chennai",
-      email: "qyrus.in@gmail.com", // Feel free to change this
+      name: "ashiss",
+      email: "ashissm05@gmail.com", // Feel free to change this
       password: hashedPassword,
       role: "CASHIER", // Set to CASHIER role
       isActive: true
