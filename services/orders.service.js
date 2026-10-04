@@ -304,7 +304,7 @@ const getOrderById = async ({ shopId, sessionId, orderId }) => {
   };
 };
 
-const editOrderById = async ({ shopId, sessionId, orderId, items, discountAmount }) => {
+const editOrderById = async ({ shopId, sessionId, orderId, items, discountAmount, orderType, note}) => {
   return await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({
       where: {
@@ -404,6 +404,8 @@ const editOrderById = async ({ shopId, sessionId, orderId, items, discountAmount
         subtotal,
         discountAmount: resolvedDiscount,
         totalAmount,
+        ...(orderType !== undefined && { orderType }),
+        ...(note !== undefined && { note }),
       },
       include: {
         orderItems: {
