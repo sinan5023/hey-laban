@@ -83,12 +83,14 @@ const editOrderById = async (req, res, next) => {
   try {
     const shopId = req.user.shopId;
     const orderId = req.params.orderId;
-    const { items } = req.body; // already validated by Joi
+    const { items, discountAmount } = req.body; // already validated by Joi
 
     const order = await orderService.editOrderById({
       shopId,
+      sessionId: req.salesSession?.id,
       orderId,
       items,
+      discountAmount,
     });
 
     return sendSuccess(res, {

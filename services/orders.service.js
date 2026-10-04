@@ -304,7 +304,7 @@ const getOrderById = async ({ shopId, sessionId, orderId }) => {
   };
 };
 
-const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
+const editOrderById = async ({ shopId, sessionId, orderId, items, discountAmount }) => {
   return await prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({
       where: {
@@ -374,8 +374,9 @@ const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
     });
 
     const subtotal = orderItems.reduce((sum, i) => sum + i.total, 0);
-    const discountAmount = Number(order.discountAmount || 0);
-    const totalAmount = Math.max(0, subtotal - discountAmount);
+    // Use the incoming discountAmount if provided, otherwise keep the existing one
+    const resolvedDiscount = discountAmount !== undefined ? Number(discountAmount) : Number(order.discountAmount || 0);
+    const totalAmount = Math.max(0, subtotal - resolvedDiscount);
 
     if (!Number.isFinite(totalAmount)) {
       throw new ApiError(500, "Unable to compute valid totalAmount");
@@ -401,6 +402,7 @@ const editOrderById = async ({ shopId, sessionId, orderId, items }) => {
       where: { id: order.id },
       data: {
         subtotal,
+        discountAmount: resolvedDiscount,
         totalAmount,
       },
       include: {
