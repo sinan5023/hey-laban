@@ -80,6 +80,9 @@ const patchOrderSchema = Joi.object({
       .items(orderItemEditableSchema)
       .min(1) // must never be empty
       .required(),
+    discountAmount: Joi.number().min(0).optional(),
+    orderType: Joi.string().valid("DINE_IN", "TAKEOUT", "DELIVERY").optional(),
+    note: Joi.string().allow(null, "").optional(),
   }).required(),
 
   query: Joi.object().unknown(true).optional().default({}),
