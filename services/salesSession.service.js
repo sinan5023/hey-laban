@@ -532,14 +532,47 @@ const getCurrentSessionOverview = async ({ shopId }) => {
       where: { shopId, sessionId },
       select: {
         id: true,
+        orderNo: true,
+        tokenNo: true,
+        orderType: true,
         status: true,
+        kotStatus: true,
+        subtotal: true,
+        discountAmount: true,
         totalAmount: true,
+        note: true,
         createdAt: true,
+        completedAt: true,
+        cancelledAt: true,
+        cancelReason: true,
         payments: {
           where: { status: PaymentStatus.COMPLETED },
           select: { method: true, amount: true },
         },
+        orderItems: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            quantity: true,
+            total: true,
+            note: true,
+            product: {
+              select: {
+                id: true,
+                name: true,
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.expense.aggregate({
       where: { shopId, sessionId, entryType: "SESSION" },
@@ -619,6 +652,44 @@ const getCurrentSessionOverview = async ({ shopId }) => {
   const expectedCashInDrawer =
     openingCash + paymentBreakdown.cash - cashExpenses;
 
+  const orderList = orders.map((order) => ({
+    id: order.id,
+    orderNo: order.orderNo,
+    tokenNo: order.tokenNo,
+    orderType: order.orderType,
+    status: order.status,
+    kotStatus: order.kotStatus,
+    subtotal: roundToTwo(toNumber(order.subtotal)),
+    discountAmount: roundToTwo(toNumber(order.discountAmount)),
+    totalAmount: roundToTwo(toNumber(order.totalAmount)),
+    note: order.note,
+    createdAt: order.createdAt,
+    completedAt: order.completedAt,
+    cancelledAt: order.cancelledAt,
+    cancelReason: order.cancelReason,
+    payments: order.payments.map((p) => ({
+      method: p.method,
+      amount: roundToTwo(toNumber(p.amount)),
+    })),
+    orderItems: order.orderItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: roundToTwo(toNumber(item.price)),
+      quantity: toNumber(item.quantity),
+      total: roundToTwo(toNumber(item.total)),
+      note: item.note,
+      product: item.product
+        ? {
+            id: item.product.id,
+            name: item.product.name,
+            category: item.product.category
+              ? { id: item.product.category.id, name: item.product.category.name }
+              : null,
+          }
+        : null,
+    })),
+  }));
+
   return {
     preset: "current",
     session: {
@@ -657,6 +728,7 @@ const getCurrentSessionOverview = async ({ shopId }) => {
       cashExpenses: roundToTwo(cashExpenses),
       expectedCashInDrawer: roundToTwo(expectedCashInDrawer),
     },
+    orderList,
   };
 };
 
