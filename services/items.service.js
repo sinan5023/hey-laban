@@ -77,6 +77,7 @@ const getManagementCatalogue = async ({ shopId }) => {
           name: true,
           description: true,
           price: true,
+          cogs:true,
           sortOrder: true,
           isActive: true,
           categoryId: true,
@@ -102,6 +103,7 @@ const getManagementCatalogue = async ({ shopId }) => {
         name: product.name,
         description: product.description,
         price: product.price.toNumber(),
+        cogs: product.cogs?.toNumber() || 0,
         sortOrder: product.sortOrder,
         isActive: product.isActive,
         rawMaterial: product.productIngredients?.[0]?.rawMaterial || null,
@@ -116,6 +118,7 @@ const createProduct = async ({
   name,
   description,
   price,
+  cogs,
   sortOrder,
 }) => {
   if (!name || !price) {
@@ -138,6 +141,7 @@ const createProduct = async ({
       name,
       description: description || null,
       price: price,
+      cogs: cogs ?? null,
       sortOrder: sortOrder || 0,
       isActive: true,
     },
@@ -152,6 +156,7 @@ const updateProduct = async ({
   name,
   description,
   price,
+  cogs,
   sortOrder,
 }) => {
   if (!id) {
@@ -167,16 +172,6 @@ const updateProduct = async ({
     throw new ApiError(404, "Product not found");
   }
 
-  // If categoryId provided, verify it belongs to shop
-  // if (categoryId) {
-  //   const category = await prisma.category.findFirst({
-  //     where: { id: categoryId, shopId },
-  //   });
-  //   if (!category) {
-  //     throw new ApiError(404, "Category not found");
-  //   }
-  // }
-
   const product = await prisma.product.update({
     where: { id },
     data: {
@@ -184,6 +179,7 @@ const updateProduct = async ({
       description:
         description !== undefined ? description : existingProduct.description,
       price: price || existingProduct.price,
+      cogs: cogs !== undefined ? cogs : existingProduct.cogs,
       sortOrder: sortOrder || existingProduct.sortOrder,
     },
   });

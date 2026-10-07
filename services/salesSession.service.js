@@ -561,6 +561,7 @@ const getCurrentSessionOverview = async ({ shopId }) => {
               select: {
                 id: true,
                 name: true,
+                cogs: true,
                 category: {
                   select: {
                     id: true,
@@ -682,6 +683,7 @@ const getCurrentSessionOverview = async ({ shopId }) => {
         ? {
             id: item.product.id,
             name: item.product.name,
+            cogs: item.product.cogs !== null ? parseFloat(item.product.cogs) : null,
             category: item.product.category
               ? { id: item.product.category.id, name: item.product.category.name }
               : null,
