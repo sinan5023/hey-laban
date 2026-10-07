@@ -25,6 +25,10 @@ const createItemSchema = Joi.object({
       "number.min": "Price cannot be negative",
       "any.required": "Price is required",
     }),
+    cogs: Joi.number().optional().min(0).precision(2).allow(null).messages({
+      "number.base": "COGS must be a number",
+      "number.min": "COGS cannot be negative",
+    }),
     sortOrder: Joi.number().integer().min(0).optional().default(0).allow(null),
   }).required(),
 });
@@ -45,6 +49,10 @@ const updateItemSchema = Joi.object({
     description: Joi.string().optional().allow(null).max(1000),
     price: Joi.number().optional().min(0).precision(2).messages({
       "number.min": "Price cannot be negative",
+    }),
+    cogs: Joi.number().optional().min(0).precision(2).allow(null).messages({
+      "number.base": "COGS must be a number",
+      "number.min": "COGS cannot be negative",
     }),
     sortOrder: Joi.number().integer().min(0).optional(),
   }).min(1).messages({

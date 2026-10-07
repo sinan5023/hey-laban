@@ -101,6 +101,7 @@ const listInventory = async ({ shopId }) => {
           name: true,
           description: true,
           price: true,
+          cogs: true,
           isActive: true,
           sortOrder: true,
           category: {
@@ -122,6 +123,7 @@ const listInventory = async ({ shopId }) => {
       name: row.product.name,
       description: row.product.description,
       price: Number(row.product.price),
+      cogs: Number(row.product.cogs),
       isActive: row.product.isActive,
       sortOrder: row.product.sortOrder,
       categoryId: row.product.category?.id ?? null,

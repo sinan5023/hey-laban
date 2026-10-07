@@ -41,7 +41,7 @@ const getManagementCatalogue = async (req, res, next) => {
 
 const createItem = async (req, res, next) => {
   try {
-    const { categoryId, name, description, price, sortOrder } = req.body;
+    const { categoryId, name, description, price, cogs, sortOrder } = req.body;
 
     const result = await itemsService.createProduct({
       shopId: req.user.shopId,
@@ -49,6 +49,7 @@ const createItem = async (req, res, next) => {
       name,
       description,
       price,
+      cogs,
       sortOrder,
     });
 
@@ -66,7 +67,7 @@ const createItem = async (req, res, next) => {
 const updateItem = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, price, sortOrder, categoryId } = req.body;
+    const { name, description, price, cogs, sortOrder, categoryId } = req.body;
 
     const result = await itemsService.updateProduct({
       id,
@@ -74,6 +75,7 @@ const updateItem = async (req, res, next) => {
       name,
       description,
       price,
+      cogs,
       sortOrder,
       categoryId,
     });
