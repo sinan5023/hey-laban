@@ -192,13 +192,16 @@ const getReportOrders = async ({
     } else if (order.payments.length > 1) {
       paymentMethod = 'SPLIT'
     }
-
     const items = order.orderItems.map(item => ({
       name: item.name,
       cogs: toNumber(item.product.cogs),
       quantity: toNumber(item.quantity),
     }))
-    console.log(orders)
+
+    // Cancelled orders don't count toward COGS (consistent with sales summary)
+    const totalCogs = order.status === 'CANCELLED'
+      ? 0
+      : roundToTwo(items.reduce((sum, item) => sum + item.cogs * item.quantity, 0))
 
     return {
       id: order.id,
@@ -206,6 +209,7 @@ const getReportOrders = async ({
       orderTime: order.createdAt,
       status: order.status,
       paymentMethod,
+      totalCogs,
       totalPaid: roundToTwo(totalPaid),
       items,
     }
@@ -243,6 +247,11 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
           select: {
             name: true,
             quantity: true,
+            product: {
+              select: {
+                cogs: true,
+              },
+            },
           },
         },
         payments: {
@@ -274,6 +283,7 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
 
   const hourlyOrderCountMap = {}
   const itemSalesMap = {}
+  let totalCogs = 0 
 
   nonCancelledOrders.forEach((order) => {
     const orderTotal = toNumber(order.totalAmount)
@@ -281,6 +291,8 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
     if (order.orderItems) {
       order.orderItems.forEach((item) => {
         const qty = toNumber(item.quantity)
+         const cogs = toNumber(item.product?.cogs)
+        totalCogs += cogs * qty
         if (!itemSalesMap[item.name]) {
           itemSalesMap[item.name] = 0
         }
@@ -336,6 +348,7 @@ const getSalesSummary = async ({ shopId, sessionId, startDate, endDate }) => {
       dueOrderCount,
       totalRevenueAmount: roundToTwo(totalRevenueAmount),
       avgOrderValue: roundToTwo(avgOrderValue),
+      totalCogs: roundToTwo(totalCogs),
       peakHours,
       topSellingProducts,
     },
