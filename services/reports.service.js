@@ -160,6 +160,11 @@ const getReportOrders = async ({
             id: true,
             name: true,
             quantity: true,
+            product:{
+              select:{
+                cogs:true
+              }
+            }
           },
         },
         payments: {
@@ -190,8 +195,10 @@ const getReportOrders = async ({
 
     const items = order.orderItems.map(item => ({
       name: item.name,
+      cogs: toNumber(item.product.cogs),
       quantity: toNumber(item.quantity),
     }))
+    console.log(orders)
 
     return {
       id: order.id,

@@ -91,25 +91,24 @@ const openSalesSession = async ({
     throw new ApiError(409, "Sales session already exists for today");
   }
 
-  // Check if previous date session is still open
-  const previousDate = new Date(businessDate);
-  previousDate.setDate(previousDate.getDate() - 1);
-
-  const previousSession = await prisma.salesSession.findUnique({
+  // Check if any previous session is still open (not just yesterday — could be days ago)
+  const anyUnclosedPreviousSession = await prisma.salesSession.findFirst({
     where: {
-      shopId_date: {
-        shopId,
-        date: previousDate,
-      },
+      shopId,
+      status: { not: "CLOSED" },
+      date: { lt: businessDate },
     },
+    orderBy: { date: "desc" },
   });
 
-  if (previousSession && previousSession.status !== "CLOSED") {
+  if (anyUnclosedPreviousSession) {
     throw new ApiError(
       409,
-      "Previous day's sales session is still open. Close it before opening a new session.",
+      "A previous sales session is still open. Close it before opening a new session.",
     );
   }
+
+  
 
   return prisma.salesSession.create({
     data: {
