@@ -25,9 +25,9 @@ try {
   app.use(express.json());
   app.use(cookieParser());
   app.use(express.urlencoded({ extended: true }));
-  app.enable('trust proxy')
+  app.set('trust proxy', 1) // trust one proxy hop (ngrok / load balancer)
   const devOrigins = process.env.NODE_ENV !== "production" 
-    ? ["http://localhost:3000","http://192.0.0.2:3000"] 
+    ? ["http://localhost:3000","http://192.0.0.2:3000" ,"https://xgb2wrtc-3000.inc1.devtunnels.ms"] 
     : [];
 
   app.use(
