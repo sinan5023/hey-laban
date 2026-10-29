@@ -194,7 +194,8 @@ const getReportOrders = async ({
     }
     const items = order.orderItems.map(item => ({
       name: item.name,
-      cogs: toNumber(item.product.cogs),
+      // item.product is null when the product was deleted after the order was placed
+      cogs: item.product ? toNumber(item.product.cogs) : 0,
       quantity: toNumber(item.quantity),
     }))
 
